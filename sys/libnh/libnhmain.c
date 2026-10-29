@@ -209,6 +209,9 @@ nhmain(int argc, char *argv[])
     /* other ports set this in their init_nhwindows, which the shim only
        forwards; without it, prompts such as getlock()'s read stdin */
     iflags.window_inited = TRUE;
+    /* columns come tab-separated, for the front end to line up; spaces only
+       line up in a fixed-pitch font */
+    iflags.menu_tab_sep = TRUE;
     /* the browser keeps only save/, so put the files that must outlive the
        page there: the level files a closed page leaves for recovery, and
        the scores */
@@ -871,6 +874,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_valid_align(int, int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
+EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
    so the front end needs the floor tile to draw under sprites there */
@@ -1015,6 +1019,37 @@ nhweb_describe(int x, int y)
     if (!do_screen_description(cc, TRUE, 0, buf, &firstmatch, &for_supplement))
         return (const char *) 0;
     return decode_mixed(out, buf);
+}
+
+/* A help or history file for display_file(), which the shim leaves to the
+   front end; most live in the dlb archive, out of the front end's reach.
+   The caller frees the result; NULL if the file can't be opened. */
+char *
+nhweb_read_file(const char *fname)
+{
+    dlb *f = dlb_fopen(fname, "r");
+    char line[BUFSZ], *text;
+    size_t len = 0, size = BUFSZ;
+
+    if (!f)
+        return (char *) 0;
+    text = (char *) alloc((unsigned) size);
+    text[0] = '\0';
+    while (dlb_fgets(line, (int) sizeof line, f)) {
+        size_t n = strlen(line);
+
+        if (len + n + 1 > size) {
+            char *bigger = (char *) alloc((unsigned) (size *= 2));
+
+            memcpy(bigger, text, len + 1);
+            free((genericptr_t) text);
+            text = bigger;
+        }
+        memcpy(text + len, line, n + 1);
+        len += n;
+    }
+    (void) dlb_fclose(f);
+    return text;
 }
 
 /* The key for the inventory command while the core waits for a command,
