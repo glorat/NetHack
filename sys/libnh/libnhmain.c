@@ -860,6 +860,17 @@ EMSCRIPTEN_KEEPALIVE int nhweb_floor_tile(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_glyph_tile(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_equip_letter(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_equip_tile(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_inventory_key(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_role_name(int, int);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_race_name(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_role_tile(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_race_tile(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_valid_race(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_valid_gender(int, int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_valid_align(int, int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
+EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
    so the front end needs the floor tile to draw under sprites there */
@@ -914,6 +925,106 @@ nhweb_equip_tile(int slot)
 
     return otmp ? glyphmap[obj_to_glyph(otmp, rn2_on_display_rng)].tileidx
                 : -1;
+}
+
+/* Role, race, gender and alignment for the front end's character picker,
+   indexed as roles[], races[], genders[] and aligns[]. */
+
+/* NULL past the last role */
+const char *
+nhweb_role_name(int ro, int female)
+{
+    return (female && roles[ro].name.f) ? roles[ro].name.f : roles[ro].name.m;
+}
+
+/* NULL past the last race */
+const char *
+nhweb_race_name(int ra)
+{
+    return races[ra].noun;
+}
+
+int
+nhweb_role_tile(int ro, int female)
+{
+    return glyphmap[monnum_to_glyph(roles[ro].mnum, female ? FEMALE : MALE)]
+        .tileidx;
+}
+
+int
+nhweb_race_tile(int ra, int female)
+{
+    return glyphmap[monnum_to_glyph(races[ra].mnum, female ? FEMALE : MALE)]
+        .tileidx;
+}
+
+int
+nhweb_valid_race(int ro, int ra)
+{
+    return validrace(ro, ra);
+}
+
+int
+nhweb_valid_gender(int ro, int ra, int gend)
+{
+    return validgend(ro, ra, gend);
+}
+
+int
+nhweb_valid_align(int ro, int ra, int align)
+{
+    return validalign(ro, ra, align);
+}
+
+/* what the options already chose: 0 role, 1 race, 2 gender, 3 alignment;
+   negative when still open */
+int
+nhweb_chosen(int facet)
+{
+    switch (facet) {
+    case 0: return flags.initrole;
+    case 1: return flags.initrace;
+    case 2: return flags.initgend;
+    default: return flags.initalign;
+    }
+}
+
+void
+nhweb_choose(int ro, int ra, int gend, int align)
+{
+    flags.initrole = ro;
+    flags.initrace = ra;
+    flags.initgend = gend;
+    flags.initalign = align;
+}
+
+/* What farlook would say about a map square, for the map's tooltip; NULL
+   outside play, as nh_terminate() frees the level after leaving the loop. */
+const char *
+nhweb_describe(int x, int y)
+{
+    static char out[BUFSZ];
+    char buf[BUFSZ];
+    coord cc;
+    const char *firstmatch = 0;
+    struct permonst *for_supplement = 0;
+
+    if (!program_state.in_moveloop || !isok(x, y))
+        return (const char *) 0;
+    cc.x = x, cc.y = y;
+    if (!do_screen_description(cc, TRUE, 0, buf, &firstmatch, &for_supplement))
+        return (const char *) 0;
+    return decode_mixed(out, buf);
+}
+
+/* The key for the inventory command while the core waits for a command,
+   else 0: clicking an item types it, and inside a prompt it would be taken
+   as the answer. */
+int
+nhweb_inventory_key(void)
+{
+    return program_state.input_state == commandInp ? cmd_from_func(ddoinv)
+                                                   : 0;
 }
 
 /***
