@@ -874,6 +874,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_valid_align(int, int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
@@ -1019,6 +1020,35 @@ nhweb_describe(int x, int y)
     if (!do_screen_description(cc, TRUE, 0, buf, &firstmatch, &for_supplement))
         return (const char *) 0;
     return decode_mixed(out, buf);
+}
+
+/* Marks the front end draws over a map square: 1 pet, 2 pile, 4 detected,
+   8 ridden, 16 peaceful. The core has no glyph flag for peaceful monsters. */
+int
+nhweb_map_marks(int x, int y, int glyph, unsigned glyphflags)
+{
+    struct monst *mtmp;
+    int marks = 0, shown;
+
+    if (glyph_is_pet(glyph) && iflags.hilite_pet)
+        marks |= 1;
+    if ((glyphflags & MG_OBJPILE) && iflags.hilite_pile)
+        marks |= 2;
+    if ((glyphflags & MG_DETECT) && iflags.use_inverse)
+        marks |= 4;
+    if (glyphflags & MG_RIDDEN)
+        marks |= 8;
+    if (program_state.in_moveloop && !program_state.gameover && isok(x, y)
+        && !Hallucination && glyph_is_monster(glyph) && !glyph_is_pet(glyph)
+        && !glyph_is_ridden_monster(glyph) && (mtmp = m_at(x, y)) != 0
+        && mtmp->mpeaceful && !mtmp->mtame && M_AP_TYPE(mtmp) == M_AP_NOTHING
+        && canspotmon(mtmp)) {
+        shown = glyph_to_mon(glyph);
+        if (monsndx(mtmp->data) == shown
+            || (shown == PM_LONG_WORM_TAIL && mtmp->data == &mons[PM_LONG_WORM]))
+            marks |= 16;
+    }
+    return marks;
 }
 
 /* A help or history file for display_file(), which the shim leaves to the
