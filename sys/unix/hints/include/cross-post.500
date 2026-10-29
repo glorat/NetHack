@@ -152,7 +152,8 @@ endif  # dosbox
 endif  # CROSS_TO_MSDOS
 
 ifdef CROSS_TO_WASM
-$(WASM_TARGET): pregame $(TARGET_HACKLIB) $(TARGETPFX)date.o $(HOSTOBJ) $(HOBJ) $(LUACROSSLIB) $(WASM_DATA_DIR)
+$(WASM_TARGET): pregame $(TARGET_HACKLIB) $(TARGETPFX)date.o $(HOSTOBJ) $(HOBJ) $(LUACROSSLIB) $(WASM_DATA_DIR) \
+		$(WASM_DATA_DIR)/sysconf
 	-rm $@
 	$(TARGET_CC) $(TARGET_LFLAGS) $(TARGET_CFLAGS) -o $@ \
 		$(HOBJ) $(TARGETPFX)date.o $(TARGET_HACKLIB) $(TARGET_LIBS)
@@ -163,7 +164,10 @@ $(WASM_DATA_DIR): $(WASM_DATA_DIR)/nhdat
 	touch $(WASM_DATA_DIR)/logfile
 	touch $(WASM_DATA_DIR)/xlogfile
 	touch $(WASM_DATA_DIR)/livelog
-	cp ../sys/libnh/sysconf $(WASM_DATA_DIR)/sysconf
+
+# its own rule, as the directory above stays up to date once it exists
+$(WASM_DATA_DIR)/sysconf: ../sys/libnh/sysconf $(WASM_DATA_DIR)
+	cp ../sys/libnh/sysconf $@
 
 $(WASM_DATA_DIR)/nhdat:
 	( cd ..; $(MAKE) INSTDIR='$(WASM_DATA_DIR)' $(WASMDEP) dofiles-dlb )
