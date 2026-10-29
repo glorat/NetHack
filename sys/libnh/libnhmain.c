@@ -206,6 +206,24 @@ nhmain(int argc, char *argv[])
 #ifdef __EMSCRIPTEN__
     /* tiles are drawn over the floor, which print_glyph only passes when asked */
     iflags.use_background_glyph = TRUE;
+    /* other ports set this in their init_nhwindows, which the shim only
+       forwards; without it, prompts such as getlock()'s read stdin */
+    iflags.window_inited = TRUE;
+    /* the browser keeps only save/, so put the files that must outlive the
+       page there: the level files a closed page leaves for recovery, and
+       the scores */
+    gf.fqn_prefix[LEVELPREFIX] = dupstr("save/");
+    gf.fqn_prefix[SCOREPREFIX] = dupstr("save/");
+    {
+        /* topten() reads the record and won't create it */
+        FILE *record = fopen_datafile(RECORD, "a", SCOREPREFIX);
+
+        if (record)
+            (void) fclose(record);
+    }
+    /* otherwise topten() runs after exit_nhwindows(), the front end's last
+       chance to store the record */
+    iflags.toptenwin = TRUE;
 #endif
 #ifdef _M_UNIX
     init_sco_cons();
