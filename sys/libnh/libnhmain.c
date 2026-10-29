@@ -51,7 +51,6 @@ extern void init_linux_cons(void);
 
 static void wd_message(void);
 static struct passwd *get_unix_pw(void);
-ATTRNORETURN static void opt_terminate(void) NORETURN;
 
 #ifdef __EMSCRIPTEN__
 /* if WebAssembly, export this API and don't optimize it out */
@@ -769,30 +768,27 @@ sys_random_seed(void)
     return seed;
 }
 
-/* for command-line options that perform some immediate action and then
-   terminate the program without starting play, like 'nethack --version'
-   or 'nethack -s Zelda'; do some cleanup before that termination */
-ATTRNORETURN static void
-opt_terminate(void)
-{
-    config_error_done(); /* free memory allocated by config_error_init() */
+#ifdef __EMSCRIPTEN__
+EM_JS(void, js_random_uuid, (char *buf, int bufsz), {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+        stringToUTF8(crypto.randomUUID(), buf, bufsz);
+})
+#endif
 
-    nh_terminate(EXIT_SUCCESS);
-    /*NOTREACHED*/
+void
+get_nhuuid(void)
+{
+    if (svn.nhuuid[0])
+        return;
+#ifdef __EMSCRIPTEN__
+    js_random_uuid(svn.nhuuid, (int) sizeof svn.nhuuid);
+#endif
 }
 
-/* show the sysconf file name, playground directory, run-time configuration
-   file name, dumplog file name if applicable, and some other things */
-ATTRNORETURN void
-after_opt_showpaths(const char *dir)
+void
+free_nhuuid(void)
 {
-#ifdef CHDIR
-    chdirx(dir, FALSE);
-#else
-    nhUse(dir);
-#endif
-    opt_terminate();
-    /*NOTREACHED*/
+    (void) memset(svn.nhuuid, 0, sizeof svn.nhuuid);
 }
 
 #ifdef __EMSCRIPTEN__

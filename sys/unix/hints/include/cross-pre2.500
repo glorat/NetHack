@@ -277,9 +277,12 @@ EMCC_LFLAGS += -DHACKDIR=\"$(HACKDIR)\"
 EMCC_LFLAGS += -s WASM=1
 EMCC_LFLAGS += -s ALLOW_TABLE_GROWTH
 EMCC_LFLAGS += -s ASYNCIFY -s ASYNCIFY_IMPORTS='["local_callback"]'
+# Emscripten 3.1.73+ defaults to wasm setjmp/longjmp, which ASYNCIFY can't unwind
+EMCC_LFLAGS += -s SUPPORT_LONGJMP=emscripten
+EMCC_LFLAGS += -s ALLOW_MEMORY_GROWTH=1
 EMCC_LFLAGS += -O3
 EMCC_LFLAGS += -s MODULARIZE
-EMCC_LFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_repopulate_perminvent", "_malloc"]'
+EMCC_LFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_repopulate_perminvent", "_malloc", "_free"]'
 EMCC_LFLAGS += -s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "addFunction", \
 			"removeFunction", "UTF8ToString", "stringToUTF8", "getValue", \
 			"setValue", "ENV", "FS", "IDBFS"]'
@@ -297,6 +300,11 @@ EMCC_CFLAGS =
 EMCC_CFLAGS += -Wall
 EMCC_CFLAGS += -Werror
 EMCC_CFLAGS += -DNO_SIGNAL
+EMCC_CFLAGS += -s SUPPORT_LONGJMP=emscripten
+# CFLAGS reach the link step, where emcc warns about its own JS library symbols
+EMCC_CFLAGS += -Wno-error=js-compiler
+# newer clang flags upstream code that is only used under other ports
+EMCC_CFLAGS += -Wno-error=unused-but-set-global
 #EMCC_CFLAGS += -s DISABLE_EXCEPTION_CATCHING=0
 EMCC_DEBUG_LFLAGS += -s ASSERTIONS=1
 EMCC_DEBUG_LFLAGS += -s ASSERTIONS=2
@@ -363,6 +371,7 @@ override LUALIB=
 override TOPLUALIB=
 override REGEXOBJ = $(TARGETPFX)posixregex.o
 override WINOBJ=
+override UUIDOBJ=
 # don't bother Making regular NetHack executable
 override GAME=
 # the real VARDAT hasn't been defined yet for use in ALLDEP override
