@@ -248,7 +248,7 @@ struct window_procs shim_procs = {
     shim_preference_update,
     shim_getmsghistory, shim_putmsghistory,
     shim_status_init,
-    genl_status_finish, genl_status_enablefield,
+    genl_status_finish, shim_status_enablefield,
 #ifdef STATUS_HILITES
     shim_status_update,
 #else
