@@ -203,6 +203,10 @@ nhmain(int argc, char *argv[])
     commit_windowchain();
 #endif
     init_nhwindows(&argc, argv); /* now we can set up window system */
+#ifdef __EMSCRIPTEN__
+    /* tiles are drawn over the floor, which print_glyph only passes when asked */
+    iflags.use_background_glyph = TRUE;
+#endif
 #ifdef _M_UNIX
     init_sco_cons();
 #endif
@@ -792,6 +796,102 @@ free_nhuuid(void)
 }
 
 #ifdef __EMSCRIPTEN__
+/* Extended command table for the web front end's command picker; the
+   value returned by shim_get_ext_cmd is an index into extcmdlist. */
+EMSCRIPTEN_KEEPALIVE const char *nhweb_extcmd_name(int);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_extcmd_desc(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_extcmd_status(int);
+
+const char *
+nhweb_extcmd_name(int i)
+{
+    return extcmdlist[i].ef_txt;
+}
+
+const char *
+nhweb_extcmd_desc(int i)
+{
+    return extcmdlist[i].ef_desc;
+}
+
+/* -1 past the end, 0 not offered, else 1 | 2 if it autocompletes */
+int
+nhweb_extcmd_status(int i)
+{
+    const struct ext_func_tab *ec = &extcmdlist[i];
+
+    if (!ec->ef_txt)
+        return -1;
+    if ((ec->flags & (CMD_NOT_AVAILABLE | INTERNALCMD))
+        || ((ec->flags & WIZMODECMD) && !wizard))
+        return 0;
+    return 1 | ((ec->flags & AUTOCOMPLETE) ? 2 : 0);
+}
+
+/* Worn and wielded items for the equipment panel, in the panel's slot
+   order: amulet, helmet, blindfold, weapon, armor, shield (or second
+   weapon), gloves, shirt, cloak, left ring, boots, right ring. */
+extern glyph_map glyphmap[MAX_GLYPH];
+EMSCRIPTEN_KEEPALIVE int nhweb_floor_tile(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_glyph_tile(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_equip_letter(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_equip_tile(int);
+
+/* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
+   so the front end needs the floor tile to draw under sprites there */
+int
+nhweb_floor_tile(void)
+{
+    return glyphmap[cmap_to_glyph(S_room)].tileidx;
+}
+
+/* redraw_map() fills only the glyph of print_glyph's bkglyphinfo, not its
+   tileidx */
+int
+nhweb_glyph_tile(int glyph)
+{
+    return (glyph >= 0 && glyph < MAX_GLYPH) ? glyphmap[glyph].tileidx : -1;
+}
+
+static struct obj *
+nhweb_equip_obj(int slot)
+{
+    if (program_state.gameover)
+        return (struct obj *) 0;
+    switch (slot) {
+    case 0: return uamul;
+    case 1: return uarmh;
+    case 2: return ublindf;
+    case 3: return uwep;
+    case 4: return uarm;
+    case 5: return u.twoweap ? uswapwep : uarms;
+    case 6: return uarmg;
+    case 7: return uarmu;
+    case 8: return uarmc;
+    case 9: return uleft;
+    case 10: return uarmf;
+    case 11: return uright;
+    default: return (struct obj *) 0;
+    }
+}
+
+int
+nhweb_equip_letter(int slot)
+{
+    struct obj *otmp = nhweb_equip_obj(slot);
+
+    return otmp ? otmp->invlet : 0;
+}
+
+int
+nhweb_equip_tile(int slot)
+{
+    struct obj *otmp = nhweb_equip_obj(slot);
+
+    return otmp ? glyphmap[obj_to_glyph(otmp, rn2_on_display_rng)].tileidx
+                : -1;
+}
+
 /***
  * Helpers
  ***/

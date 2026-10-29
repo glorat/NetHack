@@ -348,6 +348,7 @@ WASM_CFLAGS += -DDEFAULT_WINDOW_SYS=\"shim\" \
 WASM_CFLAGS += -DNOMAIL
 WASM_CFLAGS += $(LUAINCL)
 WASM_CFLAGS += -DNOTTYGRAPHICS -DSHIM_GRAPHICS -DLIBNH
+WASM_CFLAGS += -DTILES_IN_GLYPHMAP
 WASM_CFLAGS += -DCROSSCOMPILE
 WASM_TARGET_CFLAGS = -DCROSSCOMPILE_TARGET -DCROSS_TO_WASM
 # For src Makefile
@@ -370,7 +371,7 @@ override WINLIB = emranlib
 override LUALIB=
 override TOPLUALIB=
 override REGEXOBJ = $(TARGETPFX)posixregex.o
-override WINOBJ=
+override WINOBJ= $(TARGETPFX)tile.o
 override UUIDOBJ=
 # don't bother Making regular NetHack executable
 override GAME=
