@@ -746,9 +746,15 @@ sys_random_seed(void)
     unsigned long seed = 0L;
     unsigned long pid = (unsigned long) getpid();
     boolean no_seed = TRUE;
+    const char *fixed = getenv("NETHACK_SEED");
 #ifdef DEV_RANDOM
     FILE *fptr;
+#endif
 
+    /* left weak, so the game isn't reseeded and replays from this one seed */
+    if (fixed && *fixed)
+        return strtoul(fixed, (char **) 0, 10);
+#ifdef DEV_RANDOM
     fptr = fopen(DEV_RANDOM, "r");
     if (fptr) {
         fread(&seed, sizeof (long), 1, fptr);
