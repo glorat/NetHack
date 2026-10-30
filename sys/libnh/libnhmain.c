@@ -56,6 +56,11 @@ static struct passwd *get_unix_pw(void);
 extern unsigned long shim_random_seed(void);
 extern void shim_nhuuid(char *, int);
 static void nhweb_default_menu_colors(void);
+static long nhweb_checkpoint_moves = -1L;
+static int nhweb_resuming = 0;
+#ifdef INSURANCE
+extern long nhweb_checkpoints;
+#endif
 #ifdef INSURANCE
 static int nhweb_checkpoint_poskey(coordxy *, coordxy *, int *);
 static int (*nhweb_shim_poskey)(coordxy *, coordxy *, int *);
@@ -364,6 +369,10 @@ nhmain(int argc, char *argv[])
         wd_message();
     }
 
+#ifdef __EMSCRIPTEN__
+    /* recover_savefile() leaves in_self_recover set for its caller */
+    nhweb_resuming = !resuming ? 0 : program_state.in_self_recover ? 2 : 1;
+#endif
 #if defined(__EMSCRIPTEN__) && defined(INSURANCE)
     nhweb_shim_poskey = windowprocs.win_nh_poskey;
     windowprocs.win_nh_poskey = nhweb_checkpoint_poskey;
@@ -893,6 +902,12 @@ EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_game_over(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_resumed(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_restoring(void);
+EMSCRIPTEN_KEEPALIVE long nhweb_checkpointed(void);
+EMSCRIPTEN_KEEPALIVE long nhweb_checkpoint_count(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
@@ -941,11 +956,9 @@ nhweb_default_menu_colors(void)
 static int
 nhweb_checkpoint_poskey(coordxy *x, coordxy *y, int *mod)
 {
-    static long checkpointed = -1L;
-
     if (program_state.input_state == commandInp && nhweb_in_play()
-        && svm.moves != checkpointed) {
-        checkpointed = svm.moves;
+        && svm.moves != nhweb_checkpoint_moves) {
+        nhweb_checkpoint_moves = svm.moves;
         save_currentstate();
     }
     return (*nhweb_shim_poskey)(x, y, mod);
@@ -1182,6 +1195,54 @@ int
 nhweb_in_play(void)
 {
     return program_state.in_moveloop && !program_state.gameover;
+}
+
+/* Whether the game has ended, as opposed to being saved */
+int
+nhweb_game_over(void)
+{
+    return program_state.gameover;
+}
+
+/* How play began: 0 a new game, 1 restored from a save, 2 recovered from
+   the files a game left unfinished */
+int
+nhweb_resumed(void)
+{
+    return nhweb_resuming;
+}
+
+/* Whether a save is being read back in */
+int
+nhweb_restoring(void)
+{
+    return program_state.restoring;
+}
+
+/* The turn of the last checkpoint taken before a command; -1 if none yet */
+long
+nhweb_checkpointed(void)
+{
+    return nhweb_checkpoint_moves;
+}
+
+/* How many checkpoints the game has written, at level changes and before
+   commands alike */
+long
+nhweb_checkpoint_count(void)
+{
+#ifdef INSURANCE
+    return nhweb_checkpoints;
+#else
+    return 0L;
+#endif
+}
+
+/* The name the game's own files go by, once the hero has a name */
+const char *
+nhweb_game_name(void)
+{
+    return gl.lock;
 }
 
 /* Marks the front end draws over a map square: 1 pet, 2 pile, 4 detected,
