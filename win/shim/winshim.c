@@ -160,6 +160,7 @@ DECLCB(short, set_shim_font_name,(winid window_type, char *font_name),"2is", A2P
 DECLCB(char *,shim_get_color_string,(void),"sv")
 DECLCB(unsigned long, shim_now, (void), "i")
 DECLCB(unsigned long, shim_random_seed, (void), "i")
+VDECLCB(shim_nhuuid, (char *buf, int bufsz), "vpi", P2V buf, A2P bufsz)
 
 VDECLCB(shim_preference_update, (const char *pref), "vp", P2V pref)
 DECLCB(char *,shim_getmsghistory, (boolean init), "sb", A2P init)
