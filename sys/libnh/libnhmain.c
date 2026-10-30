@@ -1023,8 +1023,6 @@ nhweb_describe(int x, int y)
     return decode_mixed(out, buf);
 }
 
-/* Marks the front end draws over a map square: 1 pet, 2 pile, 4 detected,
-   8 ridden, 16 peaceful. The core has no glyph flag for peaceful monsters. */
 /* Whether monsters can still be asked about: not once the game is over */
 int
 nhweb_in_play(void)
@@ -1032,6 +1030,8 @@ nhweb_in_play(void)
     return program_state.in_moveloop && !program_state.gameover;
 }
 
+/* Marks the front end draws over a map square: 1 pet, 2 pile, 4 detected,
+   8 ridden, 16 peaceful. The core has no glyph flag for peaceful monsters. */
 int
 nhweb_map_marks(int x, int y, int glyph, unsigned glyphflags)
 {
