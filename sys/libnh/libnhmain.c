@@ -882,6 +882,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
@@ -1099,6 +1100,22 @@ unsigned long
 nhweb_condition_mask(int i)
 {
     return (i >= 0 && i < CONDITION_COUNT) ? conditions[cond_idx[i]].mask : 0;
+}
+
+/* The letters of everything carried, gold included, for an item prompt's
+   menu to take letters it doesn't list, as the text prompt it replaces did */
+const char *
+nhweb_invent_letters(void)
+{
+    static char letters[64];
+    struct obj *otmp;
+    int n = 0;
+
+    for (otmp = gi.invent; otmp && n < (int) sizeof letters - 1;
+         otmp = otmp->nobj)
+        letters[n++] = otmp->invlet;
+    letters[n] = '\0';
+    return letters;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
