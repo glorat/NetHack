@@ -53,6 +53,10 @@ static void wd_message(void);
 static struct passwd *get_unix_pw(void);
 #ifdef __EMSCRIPTEN__
 static void nhweb_default_menu_colors(void);
+#ifdef INSURANCE
+static int nhweb_checkpoint_poskey(coordxy *, coordxy *, int *);
+static int (*nhweb_shim_poskey)(coordxy *, coordxy *, int *);
+#endif
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -357,6 +361,10 @@ nhmain(int argc, char *argv[])
         wd_message();
     }
 
+#if defined(__EMSCRIPTEN__) && defined(INSURANCE)
+    nhweb_shim_poskey = windowprocs.win_nh_poskey;
+    windowprocs.win_nh_poskey = nhweb_checkpoint_poskey;
+#endif
     /* moveloop() never returns but isn't flagged NORETURN */
     moveloop(resuming);
 
@@ -923,6 +931,24 @@ nhweb_default_menu_colors(void)
     }
     iflags.use_menu_color = wanted;
 }
+
+#ifdef INSURANCE
+/* A browser tab can be closed at any moment, so before waiting for each
+   command, once time has passed, checkpoint as a level change would, for
+   recovery to bring back nearly everything */
+static int
+nhweb_checkpoint_poskey(coordxy *x, coordxy *y, int *mod)
+{
+    static long checkpointed = -1L;
+
+    if (program_state.input_state == commandInp && nhweb_in_play()
+        && svm.moves != checkpointed) {
+        checkpointed = svm.moves;
+        save_currentstate();
+    }
+    return (*nhweb_shim_poskey)(x, y, mod);
+}
+#endif
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
    so the front end needs the floor tile to draw under sprites there */
