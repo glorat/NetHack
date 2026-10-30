@@ -885,6 +885,7 @@ EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_dirchars(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_yn_number(long);
+EMSCRIPTEN_KEEPALIVE int nhweb_font_size_message(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
@@ -1134,6 +1135,15 @@ void
 nhweb_set_yn_number(long n)
 {
     yn_number = n;
+}
+
+/* The text size the options ask for, in points: font_size_message, else
+   font_size_status; 0 if neither is set */
+int
+nhweb_font_size_message(void)
+{
+    return iflags.wc_fontsiz_message > 0 ? iflags.wc_fontsiz_message
+                                         : iflags.wc_fontsiz_status;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
