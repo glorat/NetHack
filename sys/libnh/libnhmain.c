@@ -875,6 +875,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
+EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
@@ -1024,6 +1025,13 @@ nhweb_describe(int x, int y)
 
 /* Marks the front end draws over a map square: 1 pet, 2 pile, 4 detected,
    8 ridden, 16 peaceful. The core has no glyph flag for peaceful monsters. */
+/* Whether monsters can still be asked about: not once the game is over */
+int
+nhweb_in_play(void)
+{
+    return program_state.in_moveloop && !program_state.gameover;
+}
+
 int
 nhweb_map_marks(int x, int y, int glyph, unsigned glyphflags)
 {
@@ -1038,7 +1046,7 @@ nhweb_map_marks(int x, int y, int glyph, unsigned glyphflags)
         marks |= 4;
     if (glyphflags & MG_RIDDEN)
         marks |= 8;
-    if (program_state.in_moveloop && !program_state.gameover && isok(x, y)
+    if (nhweb_in_play() && isok(x, y)
         && !Hallucination && glyph_is_monster(glyph) && !glyph_is_pet(glyph)
         && !glyph_is_ridden_monster(glyph) && (mtmp = m_at(x, y)) != 0
         && mtmp->mpeaceful && !mtmp->mtame && M_AP_TYPE(mtmp) == M_AP_NOTHING
