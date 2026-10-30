@@ -51,6 +51,9 @@ extern void init_linux_cons(void);
 
 static void wd_message(void);
 static struct passwd *get_unix_pw(void);
+#ifdef __EMSCRIPTEN__
+static void nhweb_default_menu_colors(void);
+#endif
 
 #ifdef __EMSCRIPTEN__
 /* if WebAssembly, export this API and don't optimize it out */
@@ -227,6 +230,7 @@ nhmain(int argc, char *argv[])
     /* otherwise topten() runs after exit_nhwindows(), the front end's last
        chance to store the record */
     iflags.toptenwin = TRUE;
+    nhweb_default_menu_colors();
 #endif
 #ifdef _M_UNIX
     init_sco_cons();
@@ -882,6 +886,36 @@ EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
+
+/* Blessed items green and cursed ones red in menus, after the player's own
+   MENUCOLOR rules so those win; adding a rule would turn menucolors on */
+static void
+nhweb_default_menu_colors(void)
+{
+    static const char *const rules[] = {
+        "\" blessed \"=green",
+        "\" holy water\"=green",
+        "\" cursed \"=red",
+        "\" unholy water\"=red",
+    };
+    struct menucoloring *players = gm.menu_colorings, *last;
+    boolean wanted = iflags.use_menu_color;
+    char rule[BUFSZ];
+    int i;
+
+    gm.menu_colorings = (struct menucoloring *) 0;
+    for (i = 0; i < SIZE(rules); ++i) {
+        Strcpy(rule, rules[i]);
+        (void) add_menu_coloring(rule);
+    }
+    if (players) {
+        for (last = players; last->next; last = last->next)
+            continue;
+        last->next = gm.menu_colorings;
+        gm.menu_colorings = players;
+    }
+    iflags.use_menu_color = wanted;
+}
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
    so the front end needs the floor tile to draw under sprites there */
