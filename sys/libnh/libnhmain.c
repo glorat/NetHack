@@ -877,6 +877,7 @@ EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
+EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
@@ -1056,6 +1057,14 @@ long
 nhweb_moves(void)
 {
     return svm.moves;
+}
+
+/* The i'th status condition's BL_MASK_ bit in the order tty and curses
+   show them, most serious first; 0 past the last */
+unsigned long
+nhweb_condition_mask(int i)
+{
+    return (i >= 0 && i < CONDITION_COUNT) ? conditions[cond_idx[i]].mask : 0;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
