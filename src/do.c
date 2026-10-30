@@ -1378,6 +1378,7 @@ save_currentstate(void)
     struct monst *hitmon = svc.context.polearm.hitmon;
     struct obj *piece = svc.context.victual.piece, *tin = svc.context.tin.tin,
                *book = svc.context.spbook.book;
+    schar luck = u.uluck;
 
     /* saving without freeing leaves these pointers for restore to relink
        by id, as a full save's freeing of the monsters would */
@@ -1388,6 +1389,11 @@ save_currentstate(void)
     /* their o_ids are kept as they're set */
     svc.context.victual.piece = svc.context.tin.tin
         = svc.context.spbook.book = (struct obj *) 0;
+    /* as dosave0() does, since restoring makes the date's change again */
+    if (flags.moonphase == FULL_MOON)
+        change_luck(-1);
+    if (flags.friday13)
+        change_luck(1);
 
     program_state.in_checkpoint++;
     if (flags.ins_chkpt) {
@@ -1411,6 +1417,7 @@ save_currentstate(void)
     svc.context.victual.piece = piece;
     svc.context.tin.tin = tin;
     svc.context.spbook.book = book;
+    u.uluck = luck;
 }
 #endif
 
