@@ -1006,11 +1006,7 @@ u_init_misc(void)
     u.ualignbase[A_CURRENT] = u.ualignbase[A_ORIGINAL] = u.ualign.type =
         aligns[flags.initalign].value;
 
-#if defined(BSD) && !defined(POSIX_TYPES)
-    (void) time((long *) &ubirthday);
-#else
-    (void) time(&ubirthday);
-#endif
+    ubirthday = getnow();
 
     /*
      *  For now, everyone starts out with a night vision range of 1 and
