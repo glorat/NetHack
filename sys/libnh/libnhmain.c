@@ -876,6 +876,7 @@ EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
+EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
@@ -1047,6 +1048,14 @@ int
 nhweb_dec_graphics(void)
 {
     return SYMHANDLING(H_DEC);
+}
+
+/* The turn, which the status window doesn't otherwise say unless the time
+   option is on */
+long
+nhweb_moves(void)
+{
+    return svm.moves;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
