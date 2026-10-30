@@ -868,6 +868,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_glyph_tile(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_equip_letter(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_equip_tile(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_inventory_key(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_command_key(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_role_name(int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_race_name(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_role_tile(int, int);
@@ -1221,6 +1222,15 @@ nhweb_inventory_key(void)
 {
     return program_state.input_state == commandInp ? cmd_from_func(ddoinv)
                                                    : 0;
+}
+
+/* The key that starts an extended command while the core waits for a
+   command, for the front end's menu bar to run commands by name; 0 at any
+   other prompt, or if no key is bound to it */
+int
+nhweb_command_key(void)
+{
+    return program_state.input_state == commandInp ? extcmd_initiator() : 0;
 }
 
 /***
