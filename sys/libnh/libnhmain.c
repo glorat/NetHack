@@ -52,6 +52,7 @@ extern void init_linux_cons(void);
 static void wd_message(void);
 static struct passwd *get_unix_pw(void);
 #ifdef __EMSCRIPTEN__
+extern unsigned long shim_random_seed(void);
 static void nhweb_default_menu_colors(void);
 #ifdef INSURANCE
 static int nhweb_checkpoint_poskey(coordxy *, coordxy *, int *);
@@ -787,6 +788,12 @@ sys_random_seed(void)
     /* left weak, so the game isn't reseeded and replays from this one seed */
     if (fixed && *fixed)
         return strtoul(fixed, (char **) 0, 10);
+#ifdef __EMSCRIPTEN__
+    /* the page decides the seeds, as they may come from somewhere other
+       than the browser's own randomness */
+    has_strong_rngseed = TRUE; /* decl.c */
+    return shim_random_seed();
+#endif
 #ifdef DEV_RANDOM
     fptr = fopen(DEV_RANDOM, "r");
     if (fptr) {

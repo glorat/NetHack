@@ -28,13 +28,23 @@
 
 staticfn struct tm *getlt(void);
 
+#if defined(SHIM_GRAPHICS) && defined(__EMSCRIPTEN__)
+extern unsigned long shim_now(void);
+#endif
+
 time_t
 getnow(void)
 {
+#if defined(SHIM_GRAPHICS) && defined(__EMSCRIPTEN__)
+    /* the page decides the time, as it may come from somewhere other than
+       the browser's clock */
+    return (time_t) shim_now();
+#else
     time_t datetime = 0;
 
     (void) time((TIME_type) &datetime);
     return datetime;
+#endif
 }
 
 staticfn struct tm *

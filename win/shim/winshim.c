@@ -157,6 +157,8 @@ VDECLCB(shim_change_color,(int color, long rgb, int reverse), "viii", A2P color,
 VDECLCB(shim_change_background,(int white_or_black), "vi", A2P white_or_black)
 DECLCB(short, set_shim_font_name,(winid window_type, char *font_name),"2is", A2P window_type, P2V font_name)
 DECLCB(char *,shim_get_color_string,(void),"sv")
+DECLCB(unsigned long, shim_now, (void), "i")
+DECLCB(unsigned long, shim_random_seed, (void), "i")
 
 VDECLCB(shim_preference_update, (const char *pref), "vp", P2V pref)
 DECLCB(char *,shim_getmsghistory, (boolean init), "sb", A2P init)
