@@ -1558,6 +1558,9 @@ save_engravings(NHFILE *nhfp)
         ep2 = ep->nxt_engr;
         if (ep->engr_alloc
             && ep->engr_txt[actual_text][0] && update_file(nhfp)) {
+            char *txt[text_states];
+
+            (void) memcpy(txt, ep->engr_txt, sizeof txt);
             engr_alloc = (unsigned) ep->engr_alloc;
             szeach = ep->engr_szeach;
             Sfo_unsigned(nhfp, &engr_alloc, "engraving-engr_alloc");
@@ -1568,6 +1571,8 @@ save_engravings(NHFILE *nhfp)
             Sfo_char(nhfp, ep->engr_txt[actual_text], "engraving-actual_text", szeach);
             Sfo_char(nhfp, ep->engr_txt[remembered_text], "engraving-remembered_text", szeach);
             Sfo_char(nhfp, ep->engr_txt[pristine_text], "engraving-pristine_text", szeach);
+            /* a checkpoint carries on with the text as wiping left it */
+            (void) memcpy(ep->engr_txt, txt, sizeof txt);
         }
         if (release_data(nhfp))
             dealloc_engr(ep);
