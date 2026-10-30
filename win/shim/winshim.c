@@ -1,6 +1,7 @@
 /* NetHack 5.0 winshim.c    $NHDT-Date: 1596498345 2020/08/03 23:45:45 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.259 $ */
 /* Copyright (c) Adam Powers, 2020                                */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-30; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /* not an actual windowing port, but a fake win port for libnethack */
 

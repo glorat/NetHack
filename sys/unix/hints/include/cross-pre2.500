@@ -1,5 +1,6 @@
 #===============-=================================================
 # NetHack 5.0  include/cross-pre2 $NHDT-Date: 1597332785 2020/08/13 15:33:05 $  $NHDT-Branch: NetHack-5.0 $
+# Modified for nethack-web by Kevin Tam from 2026-10-30; the history of the "web" branch of glorat/NetHack gives each change and its date.
 #
 # Cross-compiling -PRE section 2
 #
