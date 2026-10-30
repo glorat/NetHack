@@ -869,6 +869,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_equip_letter(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_equip_tile(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_inventory_key(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_command_key(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_wizard(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_role_name(int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_race_name(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_role_tile(int, int);
@@ -1222,6 +1223,13 @@ nhweb_inventory_key(void)
 {
     return program_state.input_state == commandInp ? cmd_from_func(ddoinv)
                                                    : 0;
+}
+
+/* Whether this is a debug-mode game, for the front end's Wizard Mode menu */
+int
+nhweb_wizard(void)
+{
+    return wizard;
 }
 
 /* The key that starts an extended command while the core waits for a
