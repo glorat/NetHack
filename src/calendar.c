@@ -28,15 +28,18 @@
 #endif
 
 staticfn struct tm *getlt(void);
+staticfn struct tm *nh_localtime(time_t);
 
 #if defined(SHIM_GRAPHICS) && defined(__EMSCRIPTEN__)
+#define PAGE_TIME
 extern unsigned long shim_now(void);
+extern long shim_utc_offset(void);
 #endif
 
 time_t
 getnow(void)
 {
-#if defined(SHIM_GRAPHICS) && defined(__EMSCRIPTEN__)
+#ifdef PAGE_TIME
     /* the page decides the time, as it may come from somewhere other than
        the browser's clock */
     return (time_t) shim_now();
@@ -48,12 +51,23 @@ getnow(void)
 #endif
 }
 
+/* the page also decides the time zone, which then stays the same for a game
+   wherever it is played */
+staticfn struct tm *
+nh_localtime(time_t date)
+{
+#ifdef PAGE_TIME
+    date += shim_utc_offset();
+    return gmtime(&date);
+#else
+    return localtime((LOCALTIME_type) &date);
+#endif
+}
+
 staticfn struct tm *
 getlt(void)
 {
-    time_t date = getnow();
-
-    return localtime((LOCALTIME_type) &date);
+    return nh_localtime(getnow());
 }
 
 int
@@ -72,7 +86,7 @@ yyyymmdd(time_t date)
     if (date == 0)
         lt = getlt();
     else
-        lt = localtime((LOCALTIME_type) &date);
+        lt = nh_localtime(date);
 
     /* just in case somebody's localtime supplies (year % 100)
        rather than the expected (year - 1900) */
@@ -96,7 +110,7 @@ hhmmss(time_t date)
     if (date == 0)
         lt = getlt();
     else
-        lt = localtime((LOCALTIME_type) &date);
+        lt = nh_localtime(date);
 
     timenum = lt->tm_hour * 10000L + lt->tm_min * 100L + lt->tm_sec;
     return timenum;
@@ -112,7 +126,7 @@ yyyymmddhhmmss(time_t date)
     if (date == 0)
         lt = getlt();
     else
-        lt = localtime((LOCALTIME_type) &date);
+        lt = nh_localtime(date);
 
     /* just in case somebody's localtime supplies (year % 100)
        rather than the expected (year - 1900) */
@@ -170,7 +184,11 @@ time_from_yyyymmddhhmmss(char *buf)
             t.tm_hour = atoi(h);
             t.tm_min = atoi(mi);
             t.tm_sec = atoi(s);
+#ifdef PAGE_TIME
+            timeresult = timegm(&t) - shim_utc_offset();
+#else
             timeresult = mktime(&t);
+#endif
         }
         if (timeresult == (time_t) -1)
             ;
