@@ -890,7 +890,8 @@ savemonchn(NHFILE *nhfp, struct monst *mtmp)
         mtmp2 = mtmp->nmon;
         if (update_file(nhfp)) {
             mtmp->mnum = monsndx(mtmp->data);
-            if (mtmp->ispriest)
+            /* a checkpoint isn't leaving the level */
+            if (mtmp->ispriest && !program_state.in_checkpoint)
                 forget_temple_entry(mtmp); /* EPRI() */
             savemon(nhfp, mtmp);
         }
