@@ -352,6 +352,9 @@ WASM_CFLAGS += -DNOTTYGRAPHICS -DSHIM_GRAPHICS -DLIBNH
 WASM_CFLAGS += -DTILES_IN_GLYPHMAP
 # recover a game left by a closed page, from files kept under a prefix
 WASM_CFLAGS += -DSELF_RECOVER -DPREFIXES_IN_USE
+# Lua seeds its string hashing from the clock, which changes the order pairs()
+# visits tables in; a replay must see the same order
+WASM_CFLAGS += '-Dluai_makeseed(L)=0'
 WASM_CFLAGS += -DCROSSCOMPILE
 WASM_TARGET_CFLAGS = -DCROSSCOMPILE_TARGET -DCROSS_TO_WASM
 # For src Makefile
