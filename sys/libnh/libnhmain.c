@@ -878,6 +878,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
+EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
@@ -1038,6 +1039,14 @@ nhweb_set_ascii_map(int on)
 {
     iflags.wc_ascii_map = !!on;
     iflags.wc_tiled_map = !on;
+}
+
+/* Whether map symbols are DEC line-drawing characters, which have the high
+   bit set; tty switches character sets for them */
+int
+nhweb_dec_graphics(void)
+{
+    return SYMHANDLING(H_DEC);
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
