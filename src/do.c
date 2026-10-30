@@ -1376,6 +1376,8 @@ save_currentstate(void)
 {
     NHFILE *nhfp;
     struct monst *hitmon = svc.context.polearm.hitmon;
+    struct obj *piece = svc.context.victual.piece, *tin = svc.context.tin.tin,
+               *book = svc.context.spbook.book;
 
     /* saving without freeing leaves these pointers for restore to relink
        by id, as a full save's freeing of the monsters would */
@@ -1383,6 +1385,9 @@ save_currentstate(void)
     u.usteed_mid = u.usteed ? u.usteed->m_id : 0;
     svc.context.polearm.m_id = hitmon ? hitmon->m_id : 0;
     svc.context.polearm.hitmon = (struct monst *) 0;
+    /* their o_ids are kept as they're set */
+    svc.context.victual.piece = svc.context.tin.tin
+        = svc.context.spbook.book = (struct obj *) 0;
 
     program_state.in_checkpoint++;
     if (flags.ins_chkpt) {
@@ -1403,6 +1408,9 @@ save_currentstate(void)
     program_state.in_checkpoint--;
     u.ustuck_mid = u.usteed_mid = 0;
     svc.context.polearm.hitmon = hitmon;
+    svc.context.victual.piece = piece;
+    svc.context.tin.tin = tin;
+    svc.context.spbook.book = book;
 }
 #endif
 
