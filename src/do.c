@@ -1375,13 +1375,21 @@ void
 save_currentstate(void)
 {
     NHFILE *nhfp;
+    struct monst *hitmon = svc.context.polearm.hitmon;
+
+    /* saving without freeing leaves these pointers for restore to relink
+       by id, as a full save's freeing of the monsters would */
+    u.ustuck_mid = u.ustuck ? u.ustuck->m_id : 0;
+    u.usteed_mid = u.usteed ? u.usteed->m_id : 0;
+    svc.context.polearm.m_id = hitmon ? hitmon->m_id : 0;
+    svc.context.polearm.hitmon = (struct monst *) 0;
 
     program_state.in_checkpoint++;
     if (flags.ins_chkpt) {
         /* write out just-attained level, with pets and everything */
         nhfp = currentlevel_rewrite();
         if (!nhfp)
-            return;
+            goto done;
         if (nhfp->structlevel)
             bufon(nhfp->fd);
         nhfp->mode = WRITING;
@@ -1391,7 +1399,10 @@ save_currentstate(void)
 
     /* write out non-level state */
     savestateinlock();
+ done:
     program_state.in_checkpoint--;
+    u.ustuck_mid = u.usteed_mid = 0;
+    svc.context.polearm.hitmon = hitmon;
 }
 #endif
 
