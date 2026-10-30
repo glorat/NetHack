@@ -883,6 +883,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_dirchars(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
@@ -1116,6 +1117,14 @@ nhweb_invent_letters(void)
         letters[n++] = otmp->invlet;
     letters[n] = '\0';
     return letters;
+}
+
+/* The keys for W NW N NE E SE S SW down up, which number_pad changes, for
+   the front end's direction buttons */
+const char *
+nhweb_dirchars(void)
+{
+    return gc.Cmd.dirchars;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */
