@@ -876,6 +876,8 @@ EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
+EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
@@ -1021,6 +1023,21 @@ nhweb_describe(int x, int y)
     if (!do_screen_description(cc, TRUE, 0, buf, &firstmatch, &for_supplement))
         return (const char *) 0;
     return decode_mixed(out, buf);
+}
+
+/* The map's ascii_map option, which the front end also switches outside the
+   options menu */
+int
+nhweb_ascii_map(void)
+{
+    return iflags.wc_ascii_map;
+}
+
+void
+nhweb_set_ascii_map(int on)
+{
+    iflags.wc_ascii_map = !!on;
+    iflags.wc_tiled_map = !on;
 }
 
 /* Whether monsters can still be asked about: not once the game is over */

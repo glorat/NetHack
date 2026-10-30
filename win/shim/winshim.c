@@ -207,7 +207,7 @@ DECLCB(win_request_info *, shim_ctrl_nhwindow,
 struct window_procs shim_procs = {
     WPID(shim),
     (0
-     | WC_ASCII_MAP
+     | WC_TILED_MAP | WC_ASCII_MAP
      | WC_MOUSE_SUPPORT
      | WC_COLOR | WC_HILITE_PET | WC_INVERSE | WC_EIGHT_BIT_IN),
     (0
