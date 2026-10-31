@@ -1616,11 +1616,16 @@ mbhitm(struct monst *mtmp, struct obj *otmp)
                 Soundeffect(se_boing, 40);
                 pline("Boing!");
                 learnit = TRUE;
-            } else if (rnd(20) < 10 + u.uac &&
+            } else if (combat_luck_hit((gb.buzzer && !gb.buzzer->mwandexp)
+                                       ? CL_NONE : CL_TAKEN,
+                                       9 + u.uac, 20,
+                                       rnd(20) < 10 + u.uac) &&
                        !(gb.buzzer && !gb.buzzer->mwandexp)) {
                 monstunseesu(M_SEEN_MAGR); /* mons see hero not resisting */
                 pline_The("wand hits you!");
-                tmp = d(2, 12);
+                combat_luck_reset();
+                tmp = combat_d(2, 12);
+                combat_luck_dice(CL_TAKEN);
                 if (Half_spell_damage)
                     tmp = (tmp + 1) / 2;
                 losehp(tmp, "wand", KILLED_BY_AN);
