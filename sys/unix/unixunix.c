@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Kenneth Lorber, Kensington, Maryland, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /* This file collects some Unix dependencies */
 
@@ -49,6 +50,11 @@ veryold(int fd)
     (void) time((long *) (&date));
 #else
     (void) time(&date);
+#endif
+#ifdef __EMSCRIPTEN__
+    /* a closed page leaves its game's lock for recovery, however long ago
+       it was closed; only the player can say that game is done with */
+    date = buf.st_mtime;
 #endif
     if (date - buf.st_mtime < 3L * 24L * 60L * 60L) { /* recent */
         int lockedpid; /* should be the same size as hackpid */
