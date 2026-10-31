@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2006. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /* If you change the context structure make sure you increment EDITLEVEL in */
 /* patchlevel.h if needed. */
@@ -138,6 +139,23 @@ struct achievement_tracking {
 struct lifelists {
     long total_seen_upclose;    /* count of critters seen up close */
     long total_photographed;    /* count of critters photographed (tourists) */
+};
+
+/* how combat dice ran against what they should average; expected values
+   are scaled by COMBAT_LUCK_SCALE as they can be fractional */
+#define COMBAT_LUCK_SCALE 1000L
+enum combat_luck_side { CL_NONE = -1, CL_DEALT = 0, CL_TAKEN = 1, CL_SIDES = 2 };
+
+struct combat_luck_tally {
+    long rolls, hits, exp_hits;
+    long dice, exp_dice;
+};
+
+struct combat_luck {
+    struct combat_luck_tally side[CL_SIDES];
+    /* not saved: dice rolled for the attack underway */
+    long pending_dice, pending_exp;
+    boolean aimed_at_hero; /* next thitu() or zhitu() counts as an attack */
 };
 
 struct context_info {

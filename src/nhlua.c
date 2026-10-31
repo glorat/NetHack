@@ -1,6 +1,7 @@
 /* NetHack 5.0	nhlua.c	$NHDT-Date: 1744963460 2025/04/18 00:04:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.153 $ */
 /*      Copyright (c) 2018 by Pasi Kallinen */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 #include "dlb.h"
@@ -1319,6 +1320,81 @@ RESTORE_WARNING_UNREACHABLE_CODE
 
 #endif /* !SFCTOOL */
 
+#ifndef SFCTOOL
+static const char *const combat_luck_sides[CL_SIDES] = { "dealt", "taken" };
+
+staticfn void
+combat_luck_set(lua_State *L, const char *name, long val)
+{
+    lua_pushinteger(L, (lua_Integer) val);
+    lua_setfield(L, -2, name);
+}
+
+/* in the lua variables as these can be added to without changing the layout
+   of the save file, so that saves still load with or without them */
+staticfn void
+save_combat_luck(void)
+{
+    lua_State *L = gl.luacore;
+    int i;
+
+    lua_getglobal(L, "nh_lua_variables");
+    lua_newtable(L);
+    for (i = 0; i < CL_SIDES; ++i) {
+        const struct combat_luck_tally *t = &svc.combat_luck.side[i];
+
+        lua_newtable(L);
+        combat_luck_set(L, "rolls", t->rolls);
+        combat_luck_set(L, "hits", t->hits);
+        combat_luck_set(L, "exp_hits", t->exp_hits);
+        combat_luck_set(L, "dice", t->dice);
+        combat_luck_set(L, "exp_dice", t->exp_dice);
+        lua_setfield(L, -2, combat_luck_sides[i]);
+    }
+    lua_setfield(L, -2, "combat_luck");
+    lua_pop(L, 1);
+}
+
+staticfn long
+combat_luck_get(lua_State *L, const char *name)
+{
+    long val;
+
+    lua_getfield(L, -1, name);
+    val = (long) lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    return val;
+}
+
+staticfn void
+restore_combat_luck(void)
+{
+    lua_State *L = gl.luacore;
+    int i;
+
+    (void) memset((genericptr_t) &svc.combat_luck, 0,
+                  sizeof svc.combat_luck);
+    lua_getglobal(L, "nh_lua_variables");
+    lua_getfield(L, -1, "combat_luck");
+    if (lua_istable(L, -1)) {
+        for (i = 0; i < CL_SIDES; ++i) {
+            struct combat_luck_tally *t = &svc.combat_luck.side[i];
+
+            lua_getfield(L, -1, combat_luck_sides[i]);
+            if (lua_istable(L, -1)) {
+                t->rolls = combat_luck_get(L, "rolls");
+                t->hits = combat_luck_get(L, "hits");
+                t->exp_hits = combat_luck_get(L, "exp_hits");
+                t->dice = combat_luck_get(L, "dice");
+                t->exp_dice = combat_luck_get(L, "exp_dice");
+            }
+            lua_pop(L, 1);
+        }
+    }
+    lua_pop(L, 2);
+}
+#endif /* !SFCTOOL */
+
 #ifdef SFCTOOL
 char *lua_data;
 #endif
@@ -1329,7 +1405,10 @@ save_luadata(NHFILE *nhfp)
 {
     unsigned lua_data_len;
 #ifndef SFCTOOL
-    char *lua_data = get_nh_lua_variables(); /* note: '\0' terminated */
+    char *lua_data;
+
+    save_combat_luck();
+    lua_data = get_nh_lua_variables(); /* note: '\0' terminated */
 #endif
 
     if (!lua_data)
@@ -1359,6 +1438,7 @@ restore_luadata(NHFILE *nhfp)
     luaL_loadstring(gl.luacore, lua_data);
     free(lua_data);
     nhl_pcall_handle(gl.luacore, 0, 0, "restore_luadata", NHLpa_panic);
+    restore_combat_luck();
 #endif /* !SFCTOOL */
 }
 

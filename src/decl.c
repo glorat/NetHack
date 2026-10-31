@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2009. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 
@@ -867,6 +868,7 @@ static const struct instance_globals_saved_b init_svb = {
 static const struct instance_globals_saved_c init_svc = {
     /* decl.c */
     DUMMY,                               /* context */
+    DUMMY,                               /* combat_luck */
 };
 
 static const struct instance_globals_saved_d init_svd = {

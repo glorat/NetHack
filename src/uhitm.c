@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 
@@ -707,7 +708,7 @@ hitum_cleave(
                                &attknum, &armorpenalty);
         mon_maybe_unparalyze(mtmp);
         dieroll = rnd(20);
-        mhit = (tmp > dieroll);
+        mhit = combat_luck_hit(CL_DEALT, tmp - 1, 20, tmp > dieroll);
         gb.bhitpos.x = tx, gb.bhitpos.y = ty; /* normally set by do_attack() */
         gn.notonhead = (mtmp->mx != tx || mtmp->my != ty);
         (void) known_hitum(mtmp, uwep, &mhit, tmp, armorpenalty,
@@ -778,7 +779,8 @@ hitum(struct monst *mon, struct attack *uattk)
     tmp = find_roll_to_hit(mon, uattk->aatyp, uwep, &attknum, &armorpenalty);
     mon_maybe_unparalyze(mon);
     dieroll = rnd(20);
-    mhit = (tmp > dieroll || u.uswallow);
+    mhit = (combat_luck_hit(CL_DEALT, tmp - 1, 20, tmp > dieroll)
+            || u.uswallow);
     if (tmp > dieroll)
         exercise(A_DEX, TRUE);
 
@@ -802,7 +804,8 @@ hitum(struct monst *mon, struct attack *uattk)
                                &armorpenalty);
         mon_maybe_unparalyze(mon);
         dieroll = rnd(20);
-        mhit = (tmp > dieroll || u.uswallow);
+        mhit = (combat_luck_hit(CL_DEALT, tmp - 1, 20, tmp > dieroll)
+                || u.uswallow);
         malive = known_hitum(mon, secondwep, &mhit, tmp, armorpenalty, uattk,
                              dieroll);
         /* second passive counter-attack only occurs if second attack hits */
@@ -844,7 +847,9 @@ hmon_hitmon_barehands(struct _hitmon_data *hmd, struct monst *mon)
     } else {
         /* note: 1..2 or 1..4 can be substantially increased by
            strength bonus or skill bonus, usually both... */
-        hmd->dmg = rnd(!martial_bonus() ? 2 : 4);
+        combat_luck_reset();
+        hmd->dmg = combat_rnd(!martial_bonus() ? 2 : 4);
+        combat_luck_dice(CL_DEALT);
         hmd->use_weapon_skill = TRUE;
         hmd->train_weapon_skill = (hmd->dmg > 1);
     }
@@ -891,8 +896,11 @@ hmon_hitmon_weapon_ranged(
        train weapon's skill */
     if (hmd->mdat == &mons[PM_SHADE] && !shade_glare(obj))
         hmd->dmg = 0;
-    else
-        hmd->dmg = rnd(2);
+    else {
+        combat_luck_reset();
+        hmd->dmg = combat_rnd(2);
+        combat_luck_dice(CL_DEALT);
+    }
     if (hmd->material == SILVER && mon_hates_silver(mon)) {
         hmd->silvermsg = hmd->silverobj = TRUE;
         /* if it will already inflict dmg, make it worse */
@@ -942,6 +950,7 @@ hmon_hitmon_weapon_melee(
     /* "normal" weapon usage */
     hmd->use_weapon_skill = TRUE;
     hmd->dmg = dmgval(obj, mon);
+    combat_luck_dice(CL_DEALT);
     /* a minimal hit doesn't exercise proficiency */
     hmd->train_weapon_skill = (hmd->dmg > 1);
 
@@ -4059,6 +4068,7 @@ mhitm_ad_phys(
                     }
                 }
                 mhm->damage += dmgval(otmp, mdef);
+                combat_luck_dice(CL_TAKEN);
                 if ((marmg = which_armor(magr, W_ARMG)) != 0
                     && marmg->otyp == GAUNTLETS_OF_POWER)
                     mhm->damage += rn1(4, 3); /* 3..6 */
@@ -5519,7 +5529,8 @@ hmonas(struct monst *mon)
                                    &armorpenalty);
             mon_maybe_unparalyze(mon);
             dieroll = rnd(20);
-            dhit = (tmp > dieroll || u.uswallow);
+            dhit = (combat_luck_hit(CL_DEALT, tmp - 1, 20, tmp > dieroll)
+                    || u.uswallow);
             if (multi_weap > 1)
                 ++gt.twohits;
             /* caller must set gb.bhitpos */
@@ -5569,7 +5580,8 @@ hmonas(struct monst *mon)
                                    &attknum, &armorpenalty);
             mon_maybe_unparalyze(mon);
             dieroll = rnd(20);
-            dhit = (tmp > dieroll || u.uswallow);
+            dhit = (combat_luck_hit(CL_DEALT, tmp - 1, 20, tmp > dieroll)
+                    || u.uswallow);
             if (dhit) {
                 int compat, specialdmg;
                 long silverhit = 0L;

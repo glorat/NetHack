@@ -1,6 +1,7 @@
 /* NetHack 5.0	extern.h	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1523 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #ifndef EXTERN_H
 #define EXTERN_H
@@ -1277,6 +1278,14 @@ extern void youhiding(boolean, int);
 extern char *trap_predicament(char *, int, boolean) NONNULLARG1;
 extern int doconduct(void);
 extern void show_conduct(int);
+extern void combat_luck_reset(void);
+extern int combat_rnd(int);
+extern int combat_d(int, int);
+extern void combat_luck_dice(int);
+extern boolean combat_luck_hit(int, int, int, boolean);
+extern void combat_luck_aim(void);
+extern void combat_luck_thitu(int, boolean);
+extern void combat_luck_zhitu(void);
 extern void record_achievement(schar);
 extern boolean remove_achievement(schar);
 extern int count_achievements(void);

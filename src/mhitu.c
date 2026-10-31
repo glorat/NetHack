@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 #include "artifact.h"
@@ -803,7 +804,8 @@ mattacku(struct monst *mtmp)
             if (!range2 && (!MON_WEP(mtmp) || mtmp->mconf || Conflict
                             || !touch_petrifies(gy.youmonst.data))) {
                 if (foundyou) {
-                    if (tmp > (j = rnd(20 + i))) {
+                    if (combat_luck_hit(CL_TAKEN, tmp - 1, 20 + i,
+                                        tmp > (j = rnd(20 + i)))) {
                         if (unsolid(gy.youmonst.data)
                             && failed_grab(mtmp, &gy.youmonst, mattk))
                             continue;
@@ -845,7 +847,9 @@ mattacku(struct monst *mtmp)
             if (!range2) {
                 if (foundyou) {
                     if (u.uswallow
-                        || (!mtmp->mspec_used && tmp > (j = rnd(20 + i)))) {
+                        || (!mtmp->mspec_used
+                            && combat_luck_hit(CL_TAKEN, tmp - 1, 20 + i,
+                                               tmp > (j = rnd(20 + i))))) {
                         /* force swallowing monster to be displayed
                            even when hero is moving away */
                         flush_screen(1);
@@ -909,7 +913,9 @@ mattacku(struct monst *mtmp)
                         tmp += hittmp;
                         mswings(mtmp, mon_currwep, bash);
                     }
-                    if (tmp > (j = gm.mhitu_dieroll = rnd(20 + i)))
+                    if (combat_luck_hit(CL_TAKEN, tmp - 1, 20 + i,
+                                        tmp > (j = gm.mhitu_dieroll
+                                                   = rnd(20 + i))))
                         sum[i] = hitmu(mtmp, mattk);
                     else
                         missmu(mtmp, (tmp == j), mattk);
@@ -1184,9 +1190,13 @@ hitmu(struct monst *mtmp, struct attack *mattk)
     }
 
     /*  First determine the base damage done */
-    mhm.damage = d((int) mattk->damn, (int) mattk->damd);
+    combat_luck_reset();
+    mhm.damage = combat_d((int) mattk->damn, (int) mattk->damd);
     if ((is_undead(mdat) || is_vampshifter(mtmp)) && midnight())
-        mhm.damage += d((int) mattk->damn, (int) mattk->damd); /* extra dmg */
+        mhm.damage += combat_d((int) mattk->damn,
+                               (int) mattk->damd); /* extra dmg */
+    if (mattk->aatyp != AT_HUGS)
+        combat_luck_dice(CL_TAKEN);
 
     mhitm_adtyping(mtmp, mattk, &gy.youmonst, &mhm);
 

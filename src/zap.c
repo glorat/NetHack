@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 
@@ -27,7 +28,8 @@ staticfn void maybe_explode_trap(struct trap *, struct obj *,
                                boolean *) NONNULLARG3;
 staticfn void zap_map(coordxy, coordxy, struct obj *) NONNULLARG3;
 staticfn void bounce_dir(coordxy, coordxy, int *, int *, int) NO_NNARGS;
-staticfn int zap_hit(int, int);
+staticfn int zap_hit_wins(int, int);
+staticfn boolean zap_hit(int, int, int);
 staticfn void disintegrate_mon(struct monst *, int, const char *) NONNULLARG1;
 staticfn int adtyp_to_prop(int);
 staticfn void backfire(struct obj *) NONNULLARG1;
@@ -199,10 +201,14 @@ bhitm(struct monst *mtmp, struct obj *otmp)
             shieldeff(mtmp->mx, mtmp->my);
             pline("Boing!");
             /* 5.0: used to 'break' to avoid setting learn_it here */
-        } else if (u.uswallow || rnd(20) < 10 + find_mac(mtmp)) {
+        } else if (u.uswallow
+                   || combat_luck_hit(CL_DEALT, 9 + find_mac(mtmp), 20,
+                                      rnd(20) < 10 + find_mac(mtmp))) {
             if (disguised_mimic)
                 seemimic(mtmp);
-            dmg = d(2, 12);
+            combat_luck_reset();
+            dmg = combat_d(2, 12);
+            combat_luck_dice(CL_DEALT);
             if (dbldam)
                 dmg *= 2;
             if (otyp == SPE_FORCE_BOLT)
@@ -4253,7 +4259,7 @@ zhitm(
             sho_shieldeff = TRUE;
             break;
         }
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         if (spellcaster)
             tmp = spell_damage_bonus(tmp);
         break;
@@ -4262,7 +4268,7 @@ zhitm(
             sho_shieldeff = TRUE;
             break;
         }
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         if (spellcaster)
             tmp = spell_damage_bonus(tmp);
         orig_dmg = tmp; /* includes spell bonus but not monster vuln to fire */
@@ -4280,7 +4286,7 @@ zhitm(
             sho_shieldeff = TRUE;
             break;
         }
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         if (spellcaster)
             tmp = spell_damage_bonus(tmp);
         orig_dmg = tmp; /* includes spell bonus but not monster vuln to cold */
@@ -4340,7 +4346,7 @@ zhitm(
         tmp = mon->mhp + 1;
         break;
     case ZT_LIGHTNING:
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         if (spellcaster)
             tmp = spell_damage_bonus(tmp);
         orig_dmg = tmp;
@@ -4368,14 +4374,14 @@ zhitm(
             sho_shieldeff = TRUE;
             break;
         }
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         break;
     case ZT_ACID:
         if (resists_acid(mon) || defended(mon, AD_ACID)) {
             sho_shieldeff = TRUE;
             break;
         }
-        tmp = d(nd, 6);
+        tmp = combat_d(nd, 6);
         if (!rn2(6))
             acid_damage(MON_WEP(mon));
         if (!rn2(6))
@@ -4413,13 +4419,13 @@ zhitu(
             pline_The("missiles bounce off!");
             monstseesu(M_SEEN_MAGR);
         } else {
-            dam = d(nd, 6);
+            dam = combat_d(nd, 6);
             exercise(A_STR, FALSE);
             monstunseesu(M_SEEN_MAGR);
         }
         break;
     case ZT_FIRE:
-        orig_dam = d(nd, 6);
+        orig_dam = combat_d(nd, 6);
         if (Fire_resistance) {
             shieldeff(sx, sy);
             You("don't feel hot!");
@@ -4438,7 +4444,7 @@ zhitu(
         }
         break;
     case ZT_COLD:
-        orig_dam = d(nd, 6);
+        orig_dam = combat_d(nd, 6);
         if (Cold_resistance) {
             shieldeff(sx, sy);
             You("don't feel cold.");
@@ -4508,7 +4514,7 @@ zhitu(
         done(DIED);
         return; /* lifesaved */
     case ZT_LIGHTNING:
-        orig_dam = d(nd, 6);
+        orig_dam = combat_d(nd, 6);
         if (Shock_resistance) {
             shieldeff(sx, sy);
             You("aren't affected.");
@@ -4532,7 +4538,7 @@ zhitu(
             dam = 0;
         } else {
             pline_The("%s burns!", hliquid("acid"));
-            dam = d(nd, 6);
+            dam = combat_d(nd, 6);
             exercise(A_STR, FALSE);
             monstunseesu(M_SEEN_ACID);
         }
@@ -4585,6 +4591,7 @@ zhitu(
            including hero's own ricochets; breath attacks do full damage */
         if (dam && Half_spell_damage && abstyp < 20)
             dam = (dam + 1) / 2;
+        combat_luck_zhitu();
         losehp(dam, kbuf, KILLED_BY_AN);
     }
     return;
@@ -4701,22 +4708,44 @@ bounce_dir(coordxy sx, coordxy sy,
 }
 
 /* will zap/spell/breath attack score a hit against armor class `ac'? */
+/* how many of zap_hit()'s equally likely outcomes hit, out of
+   200 * max(1, -ac): 20 of chance, 10 of its rnd(10), then -ac of AC_VALUE */
 staticfn int
+zap_hit_wins(int ac, int spell_bonus)
+{
+    int n = max(1, -ac), wins, k;
+
+    wins = n * max(0, min(ac + spell_bonus - 1, 10));
+    for (k = 1; k <= n; ++k) {
+        int acv = (ac >= 0) ? ac : -k;
+
+        wins += 10 * max(0, min(16 + acv + spell_bonus, 19));
+    }
+    return wins;
+}
+
+staticfn boolean
 zap_hit(
     int ac,
-    int type) /* either hero cast spell type or 0 */
+    int type, /* either hero cast spell type or 0 */
+    int side) /* whose attack it counts as for combat luck */
 {
     int chance = rn2(20);
     int spell_bonus = type ? spell_hit_bonus(type) : 0;
+    int orig_ac = ac;
+    boolean hit;
 
     /* small chance for naked target to avoid being hit */
-    if (!chance)
-        return rnd(10) < ac + spell_bonus;
+    if (!chance) {
+        hit = rnd(10) < ac + spell_bonus;
+    } else {
+        /* very high armor protection does not achieve invulnerability */
+        ac = AC_VALUE(ac);
 
-    /* very high armor protection does not achieve invulnerability */
-    ac = AC_VALUE(ac);
-
-    return (3 - chance < ac + spell_bonus);
+        hit = (3 - chance < ac + spell_bonus);
+    }
+    return combat_luck_hit(side, zap_hit_wins(orig_ac, spell_bonus),
+                           200 * max(1, -orig_ac), hit);
 }
 
 staticfn void
@@ -4804,7 +4833,9 @@ dobuzz(
 
         if (type < 0)
             return;
+        combat_luck_reset();
         tmp = zhitm(u.ustuck, type, nd, &otmp);
+        combat_luck_dice(CL_DEALT);
         if (!u.ustuck) {
             u.uswallow = 0;
         } else {
@@ -4869,7 +4900,8 @@ dobuzz(
  buzzmonst:
             gn.notonhead = (mon->mx != gb.bhitpos.x
                             || mon->my != gb.bhitpos.y);
-            if (!forcemiss && zap_hit(find_mac(mon), spell_type)) {
+            if (!forcemiss && zap_hit(find_mac(mon), spell_type,
+                                      (type >= 0) ? CL_DEALT : CL_NONE)) {
                 if (mon_reflects(mon, (char *) 0)) {
                     if (cansee(mon->mx, mon->my)) {
                         hit(flash_str(fltyp, FALSE), mon, exclam(0));
@@ -4882,7 +4914,12 @@ dobuzz(
                     dy = -dy;
                 } else {
                     boolean mon_could_move = mon->mcanmove;
-                    int tmp = zhitm(mon, type, nd, &otmp);
+                    int tmp;
+
+                    combat_luck_reset();
+                    tmp = zhitm(mon, type, nd, &otmp);
+                    if (type >= 0)
+                        combat_luck_dice(CL_DEALT);
 
                     if (is_rider(mon->data)
                         && abs(type) == ZT_BREATH(ZT_DEATH)) {
@@ -4959,7 +4996,10 @@ dobuzz(
             if (u.usteed && !rn2(3) && !mon_reflects(u.usteed, (char *) 0)) {
                 mon = u.usteed;
                 goto buzzmonst;
-            } else if (!forcemiss && zap_hit((int) u.uac, 0)) {
+            } else if (!forcemiss
+                       && zap_hit((int) u.uac, 0,
+                                  (type <= BZ_M_BREATH(0)) ? CL_TAKEN
+                                                           : CL_NONE)) {
                 range -= 2;
                 pline_dir(xytodir(-dx, -dy), "%s hits you!",
                           The(flash_str(fltyp, FALSE)));
@@ -4977,7 +5017,11 @@ dobuzz(
                 } else {
                     /* flash_str here only used for killer; suppress
                      * hallucination */
+                    if (type <= BZ_M_BREATH(0))
+                        combat_luck_aim();
                     zhitu(type, nd, flash_str(fltyp, TRUE), sx, sy);
+                    /* zhitu() returns early if life-saved from a death ray */
+                    svc.combat_luck.aimed_at_hero = FALSE;
                     monstunseesu(M_SEEN_REFL);
                 }
             } else if (!Blind) {
