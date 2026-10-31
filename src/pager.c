@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /*
  * This file contains the command routines dowhatis() and dohelp() and
@@ -369,8 +370,13 @@ object_from_map(
         observe_object(otmp); /* if a pile, clearly see the top item only */
     if (fakeobj && mtmp && mimic_obj
         && (otmp->dknown || (M_AP_FLAG(mtmp) & M_AP_F_DKNOWN))) {
-        mtmp->m_ap_type |= M_AP_F_DKNOWN;
-        observe_object(otmp);
+        if (iflags.terrainmode) {
+            /* name it as already known, without learning any more */
+            otmp->dknown = 1;
+        } else {
+            mtmp->m_ap_type |= M_AP_F_DKNOWN;
+            observe_object(otmp);
+        }
     }
     *obj_p = otmp;
     return fakeobj; /* when True, caller needs to dealloc *obj_p */
