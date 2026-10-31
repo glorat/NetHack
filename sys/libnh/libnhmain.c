@@ -234,11 +234,17 @@ nhmain(int argc, char *argv[])
     gf.fqn_prefix[LEVELPREFIX] = dupstr("save/");
     gf.fqn_prefix[SCOREPREFIX] = dupstr("save/");
     {
-        /* topten() reads the record and won't create it */
-        FILE *record = fopen_datafile(RECORD, "a", SCOREPREFIX);
+        /* topten() reads the record and won't create it, and lock_file()
+           links to each log file, so each must already be there */
+        static const char *const scorefiles[] = { RECORD, LOGFILE, XLOGFILE };
+        int i;
 
-        if (record)
-            (void) fclose(record);
+        for (i = 0; i < SIZE(scorefiles); ++i) {
+            FILE *f = fopen_datafile(scorefiles[i], "a", SCOREPREFIX);
+
+            if (f)
+                (void) fclose(f);
+        }
     }
     /* otherwise topten() runs after exit_nhwindows(), the front end's last
        chance to store the record */
