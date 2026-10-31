@@ -162,6 +162,8 @@ DECLCB(unsigned long, shim_now, (void), "i")
 DECLCB(unsigned long, shim_random_seed, (void), "i")
 DECLCB(long, shim_utc_offset, (void), "i")
 VDECLCB(shim_nhuuid, (char *buf, int bufsz), "vpi", P2V buf, A2P bufsz)
+DECLCB(int, shim_bones_wanted, (const char *path), "is", P2V path)
+VDECLCB(shim_bones_saved, (const char *path), "vs", P2V path)
 
 VDECLCB(shim_preference_update, (const char *pref), "vp", P2V pref)
 DECLCB(char *,shim_getmsghistory, (boolean init), "sb", A2P init)

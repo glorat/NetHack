@@ -6,6 +6,11 @@
 
 #include "hack.h"
 
+#ifdef __EMSCRIPTEN__
+extern int shim_bones_wanted(const char *);
+extern void shim_bones_saved(const char *);
+#endif
+
 #ifndef SFCTOOL
 staticfn boolean no_bones_level(d_level *);
 staticfn void goodfruit(int);
@@ -623,6 +628,10 @@ savebones(int how, time_t when, struct obj *corpse)
     close_nhfile(nhfp);
     commit_bonesfile(&u.uz);
     compress_bonesfile();
+#ifdef __EMSCRIPTEN__
+    /* the page keeps bones, not the core */
+    shim_bones_saved(fqname(gb.bones, BONESPREFIX, 0));
+#endif
 }
 
 #endif /* !SFCTOOL */
@@ -651,6 +660,11 @@ getbones(void)
 #endif /* !SFCTOOL */
 
     nhfp = open_bonesfile(&u.uz, &bonesid);
+#ifdef __EMSCRIPTEN__
+    /* the page writes the file there if it has bones for this level */
+    if (!nhfp && shim_bones_wanted(fqname(gb.bones, BONESPREFIX, 0)))
+        nhfp = open_bonesfile(&u.uz, &bonesid);
+#endif
     if (!nhfp)
         return 0;
     if (nhfp && nhfp->structlevel && nhfp->fd < 0)
