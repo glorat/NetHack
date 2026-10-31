@@ -1,6 +1,7 @@
 /* NetHack 5.0	rnd.c	$NHDT-Date: 1596498205 2020/08/03 23:43:25 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.30 $ */
 /*      Copyright (c) 2004 by Robert Patrick Rankin               */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 
@@ -71,6 +72,17 @@ rn2_on_display_rng(int x)
 {
     return (isaac64_next_uint64(&rnglist[DISP].rng_state) % x);
 }
+
+#ifdef __EMSCRIPTEN__
+/* the main generator's state, for the web front end to put back after
+   asking the core something that mustn't change what it does next */
+genericptr_t
+nhweb_core_rng_state(size_t *size)
+{
+    *size = sizeof rnglist[CORE].rng_state;
+    return (genericptr_t) &rnglist[CORE].rng_state;
+}
+#endif
 
 #else   /* USE_ISAAC64 */
 

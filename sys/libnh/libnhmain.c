@@ -55,6 +55,7 @@ static struct passwd *get_unix_pw(void);
 #ifdef __EMSCRIPTEN__
 extern unsigned long shim_random_seed(void);
 extern void shim_nhuuid(char *, int);
+extern genericptr_t nhweb_core_rng_state(size_t *);
 static void nhweb_default_menu_colors(void);
 static long nhweb_checkpoint_moves = -1L;
 static int nhweb_resuming = 0;
@@ -908,6 +909,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_restoring(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_checkpointed(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_checkpoint_count(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
+EMSCRIPTEN_KEEPALIVE unsigned long nhweb_rng_fingerprint(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
@@ -1101,13 +1103,31 @@ nhweb_describe(int x, int y)
     coord cc;
     const char *firstmatch = 0;
     struct permonst *for_supplement = 0;
+    unsigned terrainmode = iflags.terrainmode, ident = svc.context.ident;
+    size_t rngsize;
+    genericptr_t rng = nhweb_core_rng_state(&rngsize), saved_rng;
+    boolean found;
 
     if (!program_state.in_moveloop || !isok(x, y))
         return (const char *) 0;
     cc.x = x, cc.y = y;
-    if (!do_screen_description(cc, TRUE, 0, buf, &firstmatch, &for_supplement))
-        return (const char *) 0;
-    return decode_mixed(out, buf);
+    /* a hover isn't a look the game knows of, so it must change nothing:
+       terrain mode with every layer shown describes all the same without
+       seeing objects up close, and distantname names them without it;
+       an object remembered but gone is described from one made for the
+       purpose, which takes an id and random numbers, given back after */
+    saved_rng = alloc(rngsize);
+    (void) memcpy(saved_rng, rng, rngsize);
+    iflags.terrainmode = TER_MAP | TER_TRP | TER_OBJ | TER_MON;
+    ++gd.distantname;
+    found = do_screen_description(cc, TRUE, 0, buf, &firstmatch,
+                                  &for_supplement);
+    --gd.distantname;
+    iflags.terrainmode = terrainmode;
+    svc.context.ident = ident;
+    (void) memcpy(rng, saved_rng, rngsize);
+    free(saved_rng);
+    return found ? decode_mixed(out, buf) : (const char *) 0;
 }
 
 /* The map's ascii_map option, which the front end also switches outside the
@@ -1236,6 +1256,19 @@ nhweb_checkpoint_count(void)
 #else
     return 0L;
 #endif
+}
+
+/* A hash of the main generator's state, which changes whenever it's used */
+unsigned long
+nhweb_rng_fingerprint(void)
+{
+    size_t size, i;
+    const unsigned char *state = nhweb_core_rng_state(&size);
+    unsigned long hash = 2166136261UL;
+
+    for (i = 0; i < size; ++i)
+        hash = (hash ^ state[i]) * 16777619UL;
+    return hash;
 }
 
 /* The name the game's own files go by, once the hero has a name */
