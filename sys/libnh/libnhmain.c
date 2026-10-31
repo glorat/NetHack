@@ -910,6 +910,8 @@ EMSCRIPTEN_KEEPALIVE long nhweb_checkpointed(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_checkpoint_count(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_rng_fingerprint(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_hero_x(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_hero_y(void);
 EMSCRIPTEN_KEEPALIVE long nhweb_moves(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_condition_mask(int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_invent_letters(void);
@@ -1256,6 +1258,19 @@ nhweb_checkpoint_count(void)
 #else
     return 0L;
 #endif
+}
+
+/* Where the hero is on the map */
+int
+nhweb_hero_x(void)
+{
+    return u.ux;
+}
+
+int
+nhweb_hero_y(void)
+{
+    return u.uy;
 }
 
 /* A hash of the main generator's state, which changes whenever it's used */
