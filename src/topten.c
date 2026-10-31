@@ -1386,6 +1386,10 @@ get_rnd_toptenentry(void)
     struct toptenentry *tt;
     static struct toptenentry tt_buf;
 
+#ifdef __EMSCRIPTEN__
+    /* a recording can't replay a game that read the list, which it doesn't hold */
+    return NULL;
+#endif
     rfile = fopen_datafile(RECORD, "r", SCOREPREFIX);
     if (!rfile) {
         impossible("Cannot open record file!");
