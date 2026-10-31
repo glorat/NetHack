@@ -2191,7 +2191,7 @@ thitmonst(
             tmp += weapon_hit_bonus(obj);
         }
 
-        if (tmp >= dieroll) {
+        if (combat_luck_hit(CL_DEALT, tmp, 20, tmp >= dieroll)) {
             boolean wasthrown = (gt.thrownobj != 0),
                     /* remember weapon attribute; hmon() might destroy obj */
                     chopper = is_axe(obj);
@@ -2233,7 +2233,7 @@ thitmonst(
 
     } else if (otyp == HEAVY_IRON_BALL) {
         exercise(A_STR, TRUE);
-        if (tmp >= dieroll) {
+        if (combat_luck_hit(CL_DEALT, tmp, 20, tmp >= dieroll)) {
             int was_swallowed = guaranteed_hit;
 
             exercise(A_DEX, TRUE);
@@ -2247,7 +2247,7 @@ thitmonst(
 
     } else if (otyp == BOULDER) {
         exercise(A_STR, TRUE);
-        if (tmp >= dieroll) {
+        if (combat_luck_hit(CL_DEALT, tmp, 20, tmp >= dieroll)) {
             exercise(A_DEX, TRUE);
             (void) hmon(mon, obj, hmode, dieroll);
         } else {

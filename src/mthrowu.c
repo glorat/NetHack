@@ -104,7 +104,9 @@ thitu(
             : an(name);
     is_acid = (obj && obj->otyp == ACID_VENOM);
 
-    if (u.uac + tlev <= (dieroll = rnd(20))) {
+    dieroll = rnd(20);
+    combat_luck_thitu(u.uac + tlev - 1, u.uac + tlev > dieroll);
+    if (u.uac + tlev <= dieroll) {
         ++gm.mesg_given;
         if (Blind || !flags.verbose) {
             pline("It misses.");
@@ -702,6 +704,7 @@ m_throw(
             }
             oldumort = u.umortality;
 
+            combat_luck_aim();
             switch (singleobj->otyp) {
             case EGG:
                 if (!touch_petrifies(&mons[singleobj->corpsenm])) {
@@ -743,6 +746,7 @@ m_throw(
                     hitu = thitu(hitv, dam, &singleobj, (char *) 0);
                 }
             }
+            svc.combat_luck.aimed_at_hero = FALSE;
             if (hitu && singleobj->opoisoned && is_poisonable(singleobj)) {
                 char onmbuf[BUFSZ], knmbuf[BUFSZ];
 
@@ -1226,6 +1230,7 @@ thrwmu(struct monst *mtmp)
                   obj_is_pname(otmp) ? the(onm) : an(onm));
         }
 
+        combat_luck_aim();
         dam = dmgval(otmp, &gy.youmonst);
         hitv = 3 - distmin(u.ux, u.uy, mtmp->mx, mtmp->my);
         if (hitv < -4)
