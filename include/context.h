@@ -141,6 +141,23 @@ struct lifelists {
     long total_photographed;    /* count of critters photographed (tourists) */
 };
 
+/* how combat dice ran against what they should average; expected values
+   are scaled by COMBAT_LUCK_SCALE as they can be fractional */
+#define COMBAT_LUCK_SCALE 1000L
+enum combat_luck_side { CL_NONE = -1, CL_DEALT = 0, CL_TAKEN = 1, CL_SIDES = 2 };
+
+struct combat_luck_tally {
+    long rolls, hits, exp_hits;
+    long dice, exp_dice;
+};
+
+struct combat_luck {
+    struct combat_luck_tally side[CL_SIDES];
+    /* not saved: dice rolled for the attack underway */
+    long pending_dice, pending_exp;
+    boolean aimed_at_hero; /* next thitu() or zhitu() counts as an attack */
+};
+
 struct context_info {
     unsigned ident;         /* social security number for each monster */
     unsigned no_of_wizards; /* 0, 1 or 2 (wizard and his shadow) */

@@ -1118,6 +1118,8 @@ struct instance_globals_saved_b {
 struct instance_globals_saved_c {
     /* decl.c */
     struct context_info context;
+    /* insight.c; saved by nhlua.c, not with the structs in the save file */
+    struct combat_luck combat_luck;
 };
 
 struct instance_globals_saved_d {

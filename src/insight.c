@@ -16,6 +16,8 @@
 #include "hack.h"
 
 staticfn void enlght_out(const char *);
+staticfn void combat_luck_line(const char *, long, long, long);
+staticfn void combat_luck_report(void);
 staticfn void enlght_line(const char *, const char *, const char *,
                           const char *);
 staticfn char *enlght_combatinc(const char *, int, int, char *);
@@ -2085,6 +2087,126 @@ doconduct(void)
     return ECMD_OK;
 }
 
+void
+combat_luck_reset(void)
+{
+    svc.combat_luck.pending_dice = svc.combat_luck.pending_exp = 0L;
+}
+
+int
+combat_rnd(int x)
+{
+    int roll = rnd(x);
+
+    svc.combat_luck.pending_dice += roll;
+    svc.combat_luck.pending_exp += (x + 1) * COMBAT_LUCK_SCALE / 2;
+    return roll;
+}
+
+int
+combat_d(int n, int x)
+{
+    int roll = d(n, x);
+
+    svc.combat_luck.pending_dice += roll;
+    svc.combat_luck.pending_exp += n * (x + 1) * COMBAT_LUCK_SCALE / 2;
+    return roll;
+}
+
+/* the attack underway hit, so its pending dice count */
+void
+combat_luck_dice(int side)
+{
+    struct combat_luck_tally *t = &svc.combat_luck.side[side];
+
+    t->dice += svc.combat_luck.pending_dice;
+    t->exp_dice += svc.combat_luck.pending_exp;
+    combat_luck_reset();
+}
+
+/* an attack that hits on 'wins' of the 'die' equally likely rolls;
+   returns 'hit' so that it can wrap the test */
+boolean
+combat_luck_hit(int side, int wins, int die, boolean hit)
+{
+    struct combat_luck_tally *t;
+
+    /* attacks from inside an engulfer can't miss */
+    if (side == CL_NONE || (side == CL_DEALT && u.uswallow))
+        return hit;
+    t = &svc.combat_luck.side[side];
+    wins = max(0, min(wins, die));
+    t->rolls++;
+    if (hit)
+        t->hits++;
+    t->exp_hits += (wins * COMBAT_LUCK_SCALE + die / 2) / die;
+    return hit;
+}
+
+/* thitu() and zhitu() also serve traps and the like, which aren't counted */
+void
+combat_luck_aim(void)
+{
+    svc.combat_luck.aimed_at_hero = TRUE;
+    combat_luck_reset();
+}
+
+/* before thitu() applies the damage, which might end the game */
+void
+combat_luck_thitu(int wins, boolean hit)
+{
+    if (!svc.combat_luck.aimed_at_hero)
+        return;
+    svc.combat_luck.aimed_at_hero = FALSE;
+    (void) combat_luck_hit(CL_TAKEN, wins, 20, hit);
+    if (hit)
+        combat_luck_dice(CL_TAKEN);
+}
+
+void
+combat_luck_zhitu(void)
+{
+    if (svc.combat_luck.aimed_at_hero) {
+        svc.combat_luck.aimed_at_hero = FALSE;
+        combat_luck_dice(CL_TAKEN);
+    }
+}
+
+staticfn void
+combat_luck_line(const char *what, long actual, long rolls, long expected)
+{
+    char buf[BUFSZ], ofbuf[QBUFSZ];
+    double exp = (double) expected / COMBAT_LUCK_SCALE;
+
+    ofbuf[0] = '\0';
+    if (rolls >= 0L)
+        Sprintf(ofbuf, " of %ld", rolls);
+    Sprintf(buf, " %s: %ld%s, expected %.1f", what, actual, ofbuf, exp);
+    if (expected > 0L)
+        Sprintf(eos(buf), " (%+.1f%%)",
+                ((double) actual - exp) * 100.0 / exp);
+    enlght_out(buf);
+}
+
+staticfn void
+combat_luck_report(void)
+{
+    static const char *const heading[CL_SIDES] = { "dealt", "taken" };
+    char buf[BUFSZ];
+    int i;
+
+    enlght_out("");
+    enlght_out("Combat luck (melee, missiles and rays):");
+    for (i = 0; i < CL_SIDES; ++i) {
+        const struct combat_luck_tally *t = &svc.combat_luck.side[i];
+
+        Sprintf(buf, "Hits %s", heading[i]);
+        combat_luck_line(buf, t->hits, t->rolls, t->exp_hits);
+        Sprintf(buf, "Damage dice %s", heading[i]);
+        combat_luck_line(buf, t->dice, -1L, t->exp_dice);
+    }
+}
+
 /* display conducts; for doconduct(), also disclose() and dump_everything() */
 void
 show_conduct(int final)
@@ -2229,6 +2351,10 @@ show_conduct(int final)
     }
 
     show_achievements(final);
+    /* these hint at Luck and monsters' armor class, so a normal game only
+       discloses them when it's over */
+    if (final || wizard || discover)
+        combat_luck_report();
 
     /* Pop up the window and wait for a key */
     display_nhwindow(ge.en_win, TRUE);

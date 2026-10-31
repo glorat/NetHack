@@ -868,6 +868,7 @@ static const struct instance_globals_saved_b init_svb = {
 static const struct instance_globals_saved_c init_svc = {
     /* decl.c */
     DUMMY,                               /* context */
+    DUMMY,                               /* combat_luck */
 };
 
 static const struct instance_globals_saved_d init_svd = {
