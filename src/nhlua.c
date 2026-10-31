@@ -1,6 +1,7 @@
 /* NetHack 5.0	nhlua.c	$NHDT-Date: 1744963460 2025/04/18 00:04:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.153 $ */
 /*      Copyright (c) 2018 by Pasi Kallinen */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 #include "dlb.h"

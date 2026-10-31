@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2016. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #include "hack.h"
 

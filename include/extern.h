@@ -1,6 +1,7 @@
 /* NetHack 5.0	extern.h	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1523 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 #ifndef EXTERN_H
 #define EXTERN_H

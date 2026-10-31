@@ -1,6 +1,7 @@
 /* NetHack 5.0	insight.c	$NHDT-Date: 1777004419 2026/04/23 20:20:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.134 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /*
  * Enlightenment and Conduct+Achievements and Vanquished+Extinct+Geno'd
