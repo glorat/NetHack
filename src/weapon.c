@@ -220,12 +220,13 @@ dmgval(struct obj *otmp, struct monst *mon)
     struct permonst *ptr = mon->data;
     boolean Is_weapon = (otmp->oclass == WEAPON_CLASS || is_weptool(otmp));
 
+    combat_luck_reset();
     if (otyp == CREAM_PIE)
         return 0;
 
     if (bigmonst(ptr)) {
         if (objects[otyp].oc_wldam)
-            tmp = rnd(objects[otyp].oc_wldam);
+            tmp = combat_rnd(objects[otyp].oc_wldam);
         switch (otyp) {
         case IRON_CHAIN:
         case CROSSBOW_BOLT:
@@ -240,30 +241,30 @@ dmgval(struct obj *otmp, struct monst *mon)
         case FLAIL:
         case RANSEUR:
         case VOULGE:
-            tmp += rnd(4);
+            tmp += combat_rnd(4);
             break;
 
         case ACID_VENOM:
         case HALBERD:
         case SPETUM:
-            tmp += rnd(6);
+            tmp += combat_rnd(6);
             break;
 
         case BATTLE_AXE:
         case BARDICHE:
         case TRIDENT:
-            tmp += d(2, 4);
+            tmp += combat_d(2, 4);
             break;
 
         case TSURUGI:
         case DWARVISH_MATTOCK:
         case TWO_HANDED_SWORD:
-            tmp += d(2, 6);
+            tmp += combat_d(2, 6);
             break;
         }
     } else {
         if (objects[otyp].oc_wsdam)
-            tmp = rnd(objects[otyp].oc_wsdam);
+            tmp = combat_rnd(objects[otyp].oc_wsdam);
         switch (otyp) {
         case IRON_CHAIN:
         case CROSSBOW_BOLT:
@@ -287,11 +288,11 @@ dmgval(struct obj *otmp, struct monst *mon)
         case ELVEN_BROADSWORD:
         case RUNESWORD:
         case VOULGE:
-            tmp += rnd(4);
+            tmp += combat_rnd(4);
             break;
 
         case ACID_VENOM:
-            tmp += rnd(6);
+            tmp += combat_rnd(6);
             break;
         }
     }
