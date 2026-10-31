@@ -1372,12 +1372,6 @@ currentlevel_rewrite(void)
 }
 
 #ifdef INSURANCE
-#ifdef __EMSCRIPTEN__
-/* how many checkpoints have been written, for the web front end to mark
-   where each falls in its recording of the game */
-long nhweb_checkpoints = 0L;
-#endif
-
 void
 save_currentstate(void)
 {
@@ -1417,9 +1411,6 @@ save_currentstate(void)
 
     /* write out non-level state */
     savestateinlock();
-#ifdef __EMSCRIPTEN__
-    nhweb_checkpoints++;
-#endif
  done:
     program_state.in_checkpoint--;
     u.ustuck_mid = u.usteed_mid = 0;

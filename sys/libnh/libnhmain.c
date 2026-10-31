@@ -57,15 +57,7 @@ extern unsigned long shim_random_seed(void);
 extern void shim_nhuuid(char *, int);
 extern genericptr_t nhweb_core_rng_state(size_t *);
 static void nhweb_default_menu_colors(void);
-static long nhweb_checkpoint_moves = -1L;
 static int nhweb_resuming = 0;
-#ifdef INSURANCE
-extern long nhweb_checkpoints;
-#endif
-#ifdef INSURANCE
-static int nhweb_checkpoint_poskey(coordxy *, coordxy *, int *);
-static int (*nhweb_shim_poskey)(coordxy *, coordxy *, int *);
-#endif
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -379,10 +371,6 @@ nhmain(int argc, char *argv[])
 #ifdef __EMSCRIPTEN__
     /* recover_savefile() leaves in_self_recover set for its caller */
     nhweb_resuming = !resuming ? 0 : program_state.in_self_recover ? 2 : 1;
-#endif
-#if defined(__EMSCRIPTEN__) && defined(INSURANCE)
-    nhweb_shim_poskey = windowprocs.win_nh_poskey;
-    windowprocs.win_nh_poskey = nhweb_checkpoint_poskey;
 #endif
     /* moveloop() never returns but isn't flagged NORETURN */
     moveloop(resuming);
@@ -912,8 +900,6 @@ EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_game_over(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_resumed(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_restoring(void);
-EMSCRIPTEN_KEEPALIVE long nhweb_checkpointed(void);
-EMSCRIPTEN_KEEPALIVE long nhweb_checkpoint_count(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
 EMSCRIPTEN_KEEPALIVE unsigned long nhweb_rng_fingerprint(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_hero_x(void);
@@ -958,22 +944,6 @@ nhweb_default_menu_colors(void)
     }
     iflags.use_menu_color = wanted;
 }
-
-#ifdef INSURANCE
-/* A browser tab can be closed at any moment, so before waiting for each
-   command, once time has passed, checkpoint as a level change would, for
-   recovery to bring back nearly everything */
-static int
-nhweb_checkpoint_poskey(coordxy *x, coordxy *y, int *mod)
-{
-    if (program_state.input_state == commandInp && nhweb_in_play()
-        && svm.moves != nhweb_checkpoint_moves) {
-        nhweb_checkpoint_moves = svm.moves;
-        save_currentstate();
-    }
-    return (*nhweb_shim_poskey)(x, y, mod);
-}
-#endif
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
    so the front end needs the floor tile to draw under sprites there */
@@ -1245,25 +1215,6 @@ int
 nhweb_restoring(void)
 {
     return program_state.restoring;
-}
-
-/* The turn of the last checkpoint taken before a command; -1 if none yet */
-long
-nhweb_checkpointed(void)
-{
-    return nhweb_checkpoint_moves;
-}
-
-/* How many checkpoints the game has written, at level changes and before
-   commands alike */
-long
-nhweb_checkpoint_count(void)
-{
-#ifdef INSURANCE
-    return nhweb_checkpoints;
-#else
-    return 0L;
-#endif
 }
 
 /* Where the hero is on the map */
