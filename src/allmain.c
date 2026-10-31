@@ -2,6 +2,7 @@
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
+/* Modified for nethack-web by Kevin Tam from 2026-10-31; the history of the "web" branch of glorat/NetHack gives each change and its date. */
 
 /* various code that was replicated in *main.c */
 
@@ -108,6 +109,12 @@ moveloop_preamble(boolean resuming)
        invent is fully populated and the in_moveloop flag has been set */
     if (iflags.perm_invent)
         update_inventory();
+#if defined(__EMSCRIPTEN__) && defined(INSURANCE)
+    /* newgame()'s checkpoint is from before all this, which recovery won't do
+       for a new game, and a browser tab can be closed before any level change */
+    if (!resuming)
+        save_currentstate();
+#endif
 }
 
 staticfn void
