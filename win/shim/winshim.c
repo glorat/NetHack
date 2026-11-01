@@ -299,7 +299,8 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
 
         // do the callback
         let userCallback = globalThis[cbName];
-        userCallback.call(this, name, ... jsArgs).then((retVal) => {
+        // waking before handleSleep returns spares a call that needs no wait the whole stack unwinding
+        const finish = (retVal) => {
             // save the return value
             setPointerValue(name, ret_ptr, retType, retVal);
             reentryMutexUnlock();
@@ -308,7 +309,10 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
             } catch (e) {
                 
             }
-        });
+        };
+        const result = userCallback.call(this, name, ... jsArgs);
+        if (result instanceof Promise) result.then(finish);
+        else finish(result);
 
         function getArg(name, ptr, type) {
             return (type === "p") ? getValue(ptr, "*") : getPointerValue(name, getValue(ptr, "*"), type);
