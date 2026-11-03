@@ -1139,6 +1139,49 @@ nhweb_moves(void)
     return svm.moves;
 }
 
+/* Tells the front end of each u.uevent field that has changed since the
+   last call, with the turn it was seen on; reset takes a fresh copy, so
+   that a restored game reports nothing it already had. */
+void
+nhweb_uevent_changes(boolean reset)
+{
+    static struct u_event seen;
+
+    if (!reset) {
+#define NHWEB_UEVENT(f) \
+        if (u.uevent.f != seen.f)                                         \
+            shim_game_event(NHWEB_EVENT_UEVENT, (long) u.uevent.f, 0L,    \
+                            svm.moves, "", #f)
+        NHWEB_UEVENT(minor_oracle);
+        NHWEB_UEVENT(major_oracle);
+        NHWEB_UEVENT(read_tribute);
+        NHWEB_UEVENT(qcalled);
+        NHWEB_UEVENT(qexpelled);
+        NHWEB_UEVENT(qcompleted);
+        NHWEB_UEVENT(uheard_tune);
+        NHWEB_UEVENT(uopened_dbridge);
+        NHWEB_UEVENT(invoked);
+        NHWEB_UEVENT(gehennom_entered);
+        NHWEB_UEVENT(uhand_of_elbereth);
+        NHWEB_UEVENT(udemigod);
+        NHWEB_UEVENT(uvibrated);
+        NHWEB_UEVENT(ascended);
+        NHWEB_UEVENT(amulet_wish);
+#undef NHWEB_UEVENT
+    }
+    seen = u.uevent;
+}
+
+/* The game-long roleplay choices xlogfile's conductX reports, as bits:
+   blind, deaf, nudist, pauper, bones off, rerolling on. */
+long
+nhweb_roleplay(void)
+{
+    return (u.uroleplay.blind ? 1L : 0L) | (u.uroleplay.deaf ? 2L : 0L)
+           | (u.uroleplay.nudist ? 4L : 0L) | (u.uroleplay.pauper ? 8L : 0L)
+           | (!flags.bones ? 16L : 0L) | (u.uroleplay.reroll ? 32L : 0L);
+}
+
 /* The i'th status condition's BL_MASK_ bit in the order tty and curses
    show them, most serious first; 0 past the last */
 unsigned long

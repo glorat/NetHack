@@ -588,12 +588,18 @@ void
 moveloop(boolean resuming)
 {
     moveloop_preamble(resuming);
+#ifdef __EMSCRIPTEN__
+    nhweb_uevent_changes(TRUE);
+#endif
 
     if (!resuming)
         maybe_do_tutorial();
 
     for (;;) {
         moveloop_core();
+#ifdef __EMSCRIPTEN__
+        nhweb_uevent_changes(FALSE);
+#endif
     }
 }
 

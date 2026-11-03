@@ -3277,6 +3277,22 @@ extern void prscore(int, char **);
 extern struct toptenentry *get_rnd_toptenentry(void);
 extern struct obj *tt_oname(struct obj *) NO_NNARGS;
 extern int tt_doppel(struct monst *) NONNULLARG1;
+extern long encodeconduct(void);
+
+/* ### web front end: win/shim/winshim.c, sys/libnh/libnhmain.c ### */
+
+#ifdef __EMSCRIPTEN__
+enum nhweb_event {
+    NHWEB_EVENT_ACHIEVEMENT = 1, /* a: ACH_* id */
+    NHWEB_EVENT_CHRONICLE = 2,   /* a: LL_* flags; format string, text */
+    NHWEB_EVENT_UEVENT = 3,      /* a: new value; text: u.uevent field */
+    NHWEB_EVENT_END = 4          /* a: encodeconduct(); b: nhweb_roleplay() */
+};
+extern void shim_game_event(int, long, long, long, const char *,
+                            const char *);
+extern void nhweb_uevent_changes(boolean);
+extern long nhweb_roleplay(void);
+#endif
 
 /* ### track.c ### */
 

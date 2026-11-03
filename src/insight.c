@@ -2567,6 +2567,9 @@ record_achievement(schar achidx)
     if (repeat_achievement)
         return; /* already recorded, don't duplicate it */
     u.uachieved[i] = achidx;
+#ifdef __EMSCRIPTEN__
+    shim_game_event(NHWEB_EVENT_ACHIEVEMENT, achidx, 0L, svm.moves, "", "");
+#endif
 
     /* avoid livelog for achievements recorded during final disclosure:
        nudist and blind-from-birth; also ascension which is suppressed

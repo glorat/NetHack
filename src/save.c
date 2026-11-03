@@ -80,6 +80,11 @@ dosave0(void)
     NHFILE *nhfp, *onhfp;
     int res = 0;
 
+#ifdef __EMSCRIPTEN__
+    /* the move loop's own check won't run again, and a restore starts from
+       what's saved */
+    nhweb_uevent_changes(FALSE);
+#endif
     program_state.saving++; /* inhibit status and perm_invent updates */
     notice_mon_off();
     /* we may get here via hangup signal, in which case we want to fix up

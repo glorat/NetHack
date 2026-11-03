@@ -522,6 +522,11 @@ livelog_printf(long ll_type, const char *line, ...)
     va_end(the_args);
 
     gamelog_add(ll_type, svm.moves, gamelogbuf);
+#ifdef __EMSCRIPTEN__
+    /* here, not in gamelog_add(), which restoring a game calls again */
+    shim_game_event(NHWEB_EVENT_CHRONICLE, ll_type, 0L, svm.moves, line,
+                    gamelogbuf);
+#endif
     strNsubst(gamelogbuf, "\t", "_", 0);
     livelog_add(ll_type, gamelogbuf);
 }

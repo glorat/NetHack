@@ -1577,6 +1577,11 @@ really_done(int how)
      *  raw_prompt("--More--") (or "Press <return> to continue.") that
      *  topten() can call for !toptenwin before returning here.
      */
+#ifdef __EMSCRIPTEN__
+    nhweb_uevent_changes(FALSE);
+    shim_game_event(NHWEB_EVENT_END, encodeconduct(), nhweb_roleplay(),
+                    svm.moves, "", "");
+#endif
     if (have_windows && !iflags.toptenwin)
         exit_nhwindows((char *) 0), have_windows = FALSE;
     topten(how, endtime);

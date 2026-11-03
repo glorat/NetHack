@@ -71,7 +71,6 @@ staticfn void writeentry(FILE *, struct toptenentry *);
 #ifdef XLOGFILE
 staticfn void writexlentry(FILE *, struct toptenentry *, int);
 staticfn long encodexlogflags(void);
-staticfn long encodeconduct(void);
 staticfn long encodeachieve(boolean);
 staticfn void add_achieveX(char *, const char *, boolean);
 staticfn char *encode_extended_achievements(char *);
@@ -408,7 +407,7 @@ encodexlogflags(void)
     return e;
 }
 
-staticfn long
+long
 encodeconduct(void)
 {
     long e = 0L;
