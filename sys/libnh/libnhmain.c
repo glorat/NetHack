@@ -898,6 +898,9 @@ EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_game_over(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_hero_kind(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_dungeon_name(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_dungeon_level(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_resumed(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_restoring(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
@@ -1243,6 +1246,31 @@ int
 nhweb_game_over(void)
 {
     return program_state.gameover;
+}
+
+/* The hero's race and form for the status panel: "human valkyrie", or
+   "(human) newt" while polymorphed */
+const char *
+nhweb_hero_kind(void)
+{
+    static char buf[BUFSZ];
+
+    Snprintf(buf, sizeof buf, Upolyd ? "(%s) %s" : "%s %s", gu.urace.adj,
+             pmname(&mons[u.umonnum], Ugender));
+    return buf;
+}
+
+/* The dungeon the hero is in, and the level within it */
+const char *
+nhweb_dungeon_name(void)
+{
+    return svd.dungeons[u.uz.dnum].dname;
+}
+
+int
+nhweb_dungeon_level(void)
+{
+    return dunlev(&u.uz);
 }
 
 /* How play began: 0 a new game, 1 restored from a save, 2 recovered from
