@@ -901,6 +901,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_game_over(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_hero_kind(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_dungeon_name(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_dungeon_level(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_rogue_level(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_resumed(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_restoring(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_game_name(void);
@@ -1271,6 +1272,13 @@ int
 nhweb_dungeon_level(void)
 {
     return dunlev(&u.uz);
+}
+
+/* The Rogue tribute level is drawn as text even with tiles on */
+int
+nhweb_rogue_level(void)
+{
+    return Is_rogue_level(&u.uz);
 }
 
 /* How play began: 0 a new game, 1 restored from a save, 2 recovered from
