@@ -82,6 +82,14 @@ nhweb_core_rng_state(size_t *size)
     *size = sizeof rnglist[CORE].rng_state;
     return (genericptr_t) &rnglist[CORE].rng_state;
 }
+
+/* a new seed for the main generator from the web front end, which it
+   records, so that a replay can reseed at the same point */
+void
+nhweb_reseed_core(unsigned long seed)
+{
+    init_isaac64(seed, rn2);
+}
 #endif
 
 #else   /* USE_ISAAC64 */

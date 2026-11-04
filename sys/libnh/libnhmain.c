@@ -56,6 +56,7 @@ static struct passwd *get_unix_pw(void);
 extern unsigned long shim_random_seed(void);
 extern void shim_nhuuid(char *, int);
 extern genericptr_t nhweb_core_rng_state(size_t *);
+extern void nhweb_reseed_core(unsigned long);
 static void nhweb_default_menu_colors(void);
 static int nhweb_resuming = 0;
 #endif
@@ -898,6 +899,7 @@ EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_reseed(unsigned long);
 EMSCRIPTEN_KEEPALIVE int nhweb_game_over(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_hero_kind(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_dungeon_name(void);
@@ -1241,6 +1243,17 @@ int
 nhweb_in_play(void)
 {
     return program_state.in_moveloop && !program_state.gameover;
+}
+
+/* Puts a new seed in the main random generator, for the front end to do
+   between turns and record; 0 if no game is in play to take it */
+int
+nhweb_reseed(unsigned long seed)
+{
+    if (!nhweb_in_play())
+        return 0;
+    nhweb_reseed_core(seed);
+    return 1;
 }
 
 /* Whether the game has ended, as opposed to being saved */
