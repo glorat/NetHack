@@ -419,6 +419,7 @@ extern int rnd_extcmd_idx(void);
 extern int domonability(void);
 extern const struct ext_func_tab *ext_func_tab_from_func(int(*)(void));
 extern char cmd_from_func(int(*)(void));
+extern const char *here_cmd_actions(void);
 extern char cmd_from_dir(int, int);
 extern char *cmd_from_ecname(const char *);
 extern const char *cmdname_from_func(int(*)(void), char *, boolean);

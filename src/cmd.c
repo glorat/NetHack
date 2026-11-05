@@ -101,6 +101,7 @@ staticfn void cmdbind_remove(uchar);
 staticfn void cmdbind_swapkeys(uchar, uchar);
 staticfn int dosuspend_core(void);
 staticfn int dosh_core(void);
+staticfn int dohereaction(void);
 staticfn int doherecmdmenu(void);
 staticfn int dotherecmdmenu(void);
 staticfn int doprev_message(void);
@@ -1735,6 +1736,9 @@ struct ext_func_tab extcmdlist[] = {
               doquickwhatis, IFBURIED | GENERALCMD, NULL },
     { '?',    "help", "give a help message",
               dohelp, IFBURIED | GENERALCMD, NULL },
+    { '\0',   "hereaction",
+              "do one of #herecmdmenu's actions, chosen by its letter",
+              dohereaction, IFBURIED | GENERALCMD | NOFUZZERCMD, NULL },
     { '\0',   "herecmdmenu", "show menu of commands you can do here",
               doherecmdmenu, IFBURIED | AUTOCOMPLETE | GENERALCMD, NULL },
     { '\0',    "history", "show a summary of the game's development",
@@ -4432,7 +4436,9 @@ mcmd_addmenu(winid win, int act, const char *txt)
              MENU_ITEMFLAGS_NONE);
 }
 
-/* the actions the here-menu can offer */
+/* the actions the here-menu can offer, each known to #hereaction by the
+   letter 'a' plus its place in this list; recorded games hold those
+   letters, so only add to the end */
 static const int here_act_list[] = {
     MCMD_QUAFF, MCMD_DIP, MCMD_SIT, MCMD_OFFER, MCMD_UP, MCMD_DOWN,
     MCMD_DISMOUNT, MCMD_PICKUP, MCMD_LOOT, MCMD_TIP, MCMD_EAT,
@@ -4585,6 +4591,37 @@ there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
         mcmd_addmenu(win, acts[i], buf);
     }
     return K;
+}
+
+/* the actions #herecmdmenu would offer, each as its letter for #hereaction,
+   for an interface that shows them without a menu */
+const char *
+here_cmd_actions(void)
+{
+    static char out[SIZE(here_act_list) + 1];
+    int acts[SIZE(here_act_list)], i, j, k = 0,
+        K = here_cmd_acts(u.ux, u.uy, acts);
+
+    for (i = 0; i < K; i++)
+        for (j = 0; j < SIZE(here_act_list); j++)
+            if (here_act_list[j] == acts[i])
+                out[k++] = 'a' + j;
+    out[k] = '\0';
+    return out;
+}
+
+/* #hereaction command: an action #herecmdmenu would offer, chosen by its
+   letter rather than from the menu */
+staticfn int
+dohereaction(void)
+{
+    char ch = readchar();
+    int i = ch - 'a';
+
+    if (i < 0 || i >= SIZE(here_act_list) || !strchr(here_cmd_actions(), ch))
+        return ECMD_CANCEL;
+    act_on_act(here_act_list[i], 0, 0);
+    return ECMD_OK;
 }
 
 /* add entries to there_cmd_menu, when x,y is next to hero */
