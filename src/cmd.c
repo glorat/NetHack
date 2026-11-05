@@ -1737,7 +1737,7 @@ struct ext_func_tab extcmdlist[] = {
     { '?',    "help", "give a help message",
               dohelp, IFBURIED | GENERALCMD, NULL },
     { '\0',   "hereaction",
-              "do one of #herecmdmenu's actions, chosen by its letter",
+              "do one of #herecmdmenu's actions, chosen by its name",
               dohereaction, IFBURIED | GENERALCMD | NOFUZZERCMD, NULL },
     { '\0',   "herecmdmenu", "show menu of commands you can do here",
               doherecmdmenu, IFBURIED | AUTOCOMPLETE | GENERALCMD, NULL },
@@ -4436,14 +4436,29 @@ mcmd_addmenu(winid win, int act, const char *txt)
              MENU_ITEMFLAGS_NONE);
 }
 
-/* the actions the here-menu can offer, each known to #hereaction by the
-   letter 'a' plus its place in this list; recorded games hold those
-   letters, so only add to the end */
-static const int here_act_list[] = {
-    MCMD_QUAFF, MCMD_DIP, MCMD_SIT, MCMD_OFFER, MCMD_UP, MCMD_DOWN,
-    MCMD_DISMOUNT, MCMD_PICKUP, MCMD_LOOT, MCMD_TIP, MCMD_EAT,
-    MCMD_INVENTORY, MCMD_DROP, MCMD_REST, MCMD_SEARCH, MCMD_LOOK_HERE,
-    MCMD_CAST_SPELL, MCMD_UNTRAP_HERE,
+/* the actions the here-menu can offer, by the names #hereaction takes */
+static const struct here_act {
+    int act;
+    const char *name;
+} here_acts[] = {
+    { MCMD_QUAFF, "quaff" },
+    { MCMD_DIP, "dip" },
+    { MCMD_SIT, "sit" },
+    { MCMD_OFFER, "offer" },
+    { MCMD_UP, "up" },
+    { MCMD_DOWN, "down" },
+    { MCMD_DISMOUNT, "dismount" },
+    { MCMD_PICKUP, "pickup" },
+    { MCMD_LOOT, "loot" },
+    { MCMD_TIP, "tip" },
+    { MCMD_EAT, "eat" },
+    { MCMD_INVENTORY, "inventory" },
+    { MCMD_DROP, "drop" },
+    { MCMD_REST, "rest" },
+    { MCMD_SEARCH, "search" },
+    { MCMD_LOOK_HERE, "look" },
+    { MCMD_CAST_SPELL, "cast" },
+    { MCMD_UNTRAP_HERE, "untrap" },
 };
 
 /* the actions there_cmd_menu_self() offers at x,y, in its order; decided
@@ -4513,7 +4528,7 @@ here_cmd_acts(coordxy x, coordxy y, int *acts)
 staticfn int
 there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
 {
-    int acts[SIZE(here_act_list)], i, K = here_cmd_acts(x, y, acts);
+    int acts[SIZE(here_acts)], i, K = here_cmd_acts(x, y, acts);
     char buf[BUFSZ];
     schar typ = levl[x][y].typ;
     stairway *stway = stairway_at(x, y);
@@ -4593,35 +4608,40 @@ there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
     return K;
 }
 
-/* the actions #herecmdmenu would offer, each as its letter for #hereaction,
-   for an interface that shows them without a menu */
+/* the actions #herecmdmenu would offer, by their names for #hereaction and
+   separated by spaces, for an interface that shows them without a menu */
 const char *
 here_cmd_actions(void)
 {
-    static char out[SIZE(here_act_list) + 1];
-    int acts[SIZE(here_act_list)], i, j, k = 0,
-        K = here_cmd_acts(u.ux, u.uy, acts);
+    static char out[BUFSZ];
+    int acts[SIZE(here_acts)], i, j, K = here_cmd_acts(u.ux, u.uy, acts);
 
+    out[0] = '\0';
     for (i = 0; i < K; i++)
-        for (j = 0; j < SIZE(here_act_list); j++)
-            if (here_act_list[j] == acts[i])
-                out[k++] = 'a' + j;
-    out[k] = '\0';
+        for (j = 0; j < SIZE(here_acts); j++)
+            if (here_acts[j].act == acts[i])
+                Snprintf(eos(out), sizeof out - strlen(out), "%s%s",
+                         *out ? " " : "", here_acts[j].name);
     return out;
 }
 
 /* #hereaction command: an action #herecmdmenu would offer, chosen by its
-   letter rather than from the menu */
+   name rather than from the menu */
 staticfn int
 dohereaction(void)
 {
-    char ch = readchar();
-    int i = ch - 'a';
+    char buf[BUFSZ];
+    int acts[SIZE(here_acts)], i, j, K = here_cmd_acts(u.ux, u.uy, acts);
 
-    if (i < 0 || i >= SIZE(here_act_list) || !strchr(here_cmd_actions(), ch))
-        return ECMD_CANCEL;
-    act_on_act(here_act_list[i], 0, 0);
-    return ECMD_OK;
+    getlin("Which action here?", buf);
+    for (i = 0; i < SIZE(here_acts); i++)
+        if (!strcmp(buf, here_acts[i].name))
+            for (j = 0; j < K; j++)
+                if (acts[j] == here_acts[i].act) {
+                    act_on_act(acts[j], 0, 0);
+                    return ECMD_OK;
+                }
+    return ECMD_CANCEL;
 }
 
 /* add entries to there_cmd_menu, when x,y is next to hero */

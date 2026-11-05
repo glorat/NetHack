@@ -1424,7 +1424,7 @@ nhweb_repeat_key(void)
 }
 
 /* What the hero can do where they stand while the core waits for a command,
-   each as its letter for #hereaction, else "" */
+   by their names for #hereaction separated by spaces, else "" */
 const char *
 nhweb_here_actions(void)
 {
