@@ -885,6 +885,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_equip_tile(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_inventory_key(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_command_key(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_repeat_key(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_here_actions(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_wizard(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_tile_file(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_role_name(int, int);
@@ -1420,6 +1421,14 @@ nhweb_repeat_key(void)
 {
     return program_state.input_state == commandInp ? cmd_from_func(do_repeat)
                                                    : 0;
+}
+
+/* What the hero can do where they stand while the core waits for a command,
+   each as its letter for #hereaction, else "" */
+const char *
+nhweb_here_actions(void)
+{
+    return program_state.input_state == commandInp ? here_cmd_actions() : "";
 }
 
 /* The tile_file option, for the front end's tile set; "" if it isn't set */
