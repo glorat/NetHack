@@ -127,6 +127,7 @@ staticfn boolean accept_menu_prefix(const struct ext_func_tab *);
 staticfn void reset_cmd_vars(boolean);
 
 staticfn void mcmd_addmenu(winid, int, const char *);
+staticfn int here_cmd_acts(coordxy, coordxy, int *);
 staticfn int there_cmd_menu_self(winid, coordxy, coordxy, int *);
 staticfn int there_cmd_menu_next2u(winid, coordxy, coordxy, int, int *);
 staticfn int there_cmd_menu_far(winid, coordxy, coordxy, int);
@@ -4431,12 +4432,20 @@ mcmd_addmenu(winid win, int act, const char *txt)
              MENU_ITEMFLAGS_NONE);
 }
 
-/* command menu entries when targeting self */
+/* the actions the here-menu can offer */
+static const int here_act_list[] = {
+    MCMD_QUAFF, MCMD_DIP, MCMD_SIT, MCMD_OFFER, MCMD_UP, MCMD_DOWN,
+    MCMD_DISMOUNT, MCMD_PICKUP, MCMD_LOOT, MCMD_TIP, MCMD_EAT,
+    MCMD_INVENTORY, MCMD_DROP, MCMD_REST, MCMD_SEARCH, MCMD_LOOK_HERE,
+    MCMD_CAST_SPELL, MCMD_UNTRAP_HERE,
+};
+
+/* the actions there_cmd_menu_self() offers at x,y, in its order; decided
+   without naming any object, as naming one can mark it seen */
 staticfn int
-there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
+here_cmd_acts(coordxy x, coordxy y, int *acts)
 {
     int K = 0;
-    char buf[BUFSZ];
     schar typ = levl[x][y].typ;
     stairway *stway = stairway_at(x, y);
     struct trap *ttmp;
@@ -4444,78 +4453,136 @@ there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
     if (!u_at(x, y))
         return K;
 
-    if ((IS_FOUNTAIN(typ) || IS_SINK(typ)) && can_reach_floor(FALSE)) {
-        Sprintf(buf, "Drink from the %s",
-                defsyms[IS_FOUNTAIN(typ) ? S_fountain : S_sink].explanation);
-        mcmd_addmenu(win, MCMD_QUAFF, buf), ++K;
-    }
+    if ((IS_FOUNTAIN(typ) || IS_SINK(typ)) && can_reach_floor(FALSE))
+        acts[K++] = MCMD_QUAFF;
     if (IS_FOUNTAIN(typ) && can_reach_floor(FALSE))
-        mcmd_addmenu(win, MCMD_DIP, "Dip something into the fountain"), ++K;
+        acts[K++] = MCMD_DIP;
     if (IS_THRONE(typ))
-        mcmd_addmenu(win, MCMD_SIT, "Sit on the throne"), ++K;
+        acts[K++] = MCMD_SIT;
     if (IS_ALTAR(typ))
-        mcmd_addmenu(win, MCMD_OFFER, "Sacrifice something on the altar"), ++K;
+        acts[K++] = MCMD_OFFER;
 
-    if (stway && stway->up) {
-        Sprintf(buf, "Go up the %s",
-                stway->isladder ? "ladder" : "stairs");
-        mcmd_addmenu(win, MCMD_UP, buf), ++K;
-    }
-    if (stway && !stway->up) {
-        Sprintf(buf, "Go down the %s",
-                stway->isladder ? "ladder" : "stairs");
-        mcmd_addmenu(win, MCMD_DOWN, buf), ++K;
-    }
-    if (u.usteed) { /* another movement choice */
-        Sprintf(buf, "Dismount %s",
-                x_monnam(u.usteed, ARTICLE_THE, (char *) 0,
-                         SUPPRESS_SADDLE, FALSE));
-        mcmd_addmenu(win, MCMD_DISMOUNT, buf), ++K;
-    }
+    if (stway && stway->up)
+        acts[K++] = MCMD_UP;
+    if (stway && !stway->up)
+        acts[K++] = MCMD_DOWN;
+    if (u.usteed) /* another movement choice */
+        acts[K++] = MCMD_DISMOUNT;
 
 #if 0
-    if (Upolyd) { /* before objects */
-        Sprintf(buf, "Use %s special ability",
-                s_suffix(pmname(&mons[u.umonnum], Ugender)));
-        mcmd_addmenu(win, MCMD_MONABILITY, buf), ++K;
-    }
+    if (Upolyd) /* before objects */
+        acts[K++] = MCMD_MONABILITY;
 #endif
 
     if (OBJ_AT(x, y)) {
         struct obj *otmp = svl.level.objects[x][y];
 
-        Sprintf(buf, "Pick up %s", otmp->nexthere ? "items" : doname(otmp));
-        mcmd_addmenu(win, MCMD_PICKUP, buf), ++K;
-
+        acts[K++] = MCMD_PICKUP;
         if (Is_container(otmp)) {
-            Sprintf(buf, "Loot %s", doname(otmp));
-            mcmd_addmenu(win, MCMD_LOOT, buf), ++K;
-
-            Sprintf(buf, "Tip %s", doname(otmp));
-            mcmd_addmenu(win, MCMD_TIP, buf), ++K;
+            acts[K++] = MCMD_LOOT;
+            acts[K++] = MCMD_TIP;
         }
-        if (otmp->oclass == FOOD_CLASS) {
-            Sprintf(buf, "Eat %s", doname(otmp));
-            mcmd_addmenu(win, MCMD_EAT, buf), ++K;
-        }
+        if (otmp->oclass == FOOD_CLASS)
+            acts[K++] = MCMD_EAT;
     }
-
 
     if (gi.invent) {
-        mcmd_addmenu(win, MCMD_INVENTORY, "Inventory"), ++K;
-        mcmd_addmenu(win, MCMD_DROP, "Drop items"), ++K;
+        acts[K++] = MCMD_INVENTORY;
+        acts[K++] = MCMD_DROP;
     }
-    mcmd_addmenu(win, MCMD_REST, "Rest one turn"), ++K;
-    mcmd_addmenu(win, MCMD_SEARCH, "Search around you"), ++K;
-    mcmd_addmenu(win, MCMD_LOOK_HERE, "Look at what is here"), ++K;
+    acts[K++] = MCMD_REST;
+    acts[K++] = MCMD_SEARCH;
+    acts[K++] = MCMD_LOOK_HERE;
 
     if (num_spells() > 0)
-        mcmd_addmenu(win, MCMD_CAST_SPELL, "Cast a spell"), ++K;
+        acts[K++] = MCMD_CAST_SPELL;
 
-    if ((ttmp = t_at(x, y)) != 0 && ttmp->tseen) {
-        if (ttmp->ttyp != VIBRATING_SQUARE)
-            mcmd_addmenu(win, MCMD_UNTRAP_HERE,
-                         "Attempt to disarm trap"), ++K;
+    if ((ttmp = t_at(x, y)) != 0 && ttmp->tseen
+        && ttmp->ttyp != VIBRATING_SQUARE)
+        acts[K++] = MCMD_UNTRAP_HERE;
+    return K;
+}
+
+/* command menu entries when targeting self */
+staticfn int
+there_cmd_menu_self(winid win, coordxy x, coordxy y, int *act UNUSED)
+{
+    int acts[SIZE(here_act_list)], i, K = here_cmd_acts(x, y, acts);
+    char buf[BUFSZ];
+    schar typ = levl[x][y].typ;
+    stairway *stway = stairway_at(x, y);
+    struct obj *otmp = svl.level.objects[x][y];
+
+    for (i = 0; i < K; i++) {
+        switch (acts[i]) {
+        case MCMD_QUAFF:
+            Sprintf(buf, "Drink from the %s",
+                    defsyms[IS_FOUNTAIN(typ) ? S_fountain : S_sink].explanation);
+            break;
+        case MCMD_DIP:
+            Strcpy(buf, "Dip something into the fountain");
+            break;
+        case MCMD_SIT:
+            Strcpy(buf, "Sit on the throne");
+            break;
+        case MCMD_OFFER:
+            Strcpy(buf, "Sacrifice something on the altar");
+            break;
+        case MCMD_UP:
+            Sprintf(buf, "Go up the %s",
+                    stway->isladder ? "ladder" : "stairs");
+            break;
+        case MCMD_DOWN:
+            Sprintf(buf, "Go down the %s",
+                    stway->isladder ? "ladder" : "stairs");
+            break;
+        case MCMD_DISMOUNT:
+            Sprintf(buf, "Dismount %s",
+                    x_monnam(u.usteed, ARTICLE_THE, (char *) 0,
+                             SUPPRESS_SADDLE, FALSE));
+            break;
+        case MCMD_MONABILITY:
+            Sprintf(buf, "Use %s special ability",
+                    s_suffix(pmname(&mons[u.umonnum], Ugender)));
+            break;
+        case MCMD_PICKUP:
+            Sprintf(buf, "Pick up %s",
+                    otmp->nexthere ? "items" : doname(otmp));
+            break;
+        case MCMD_LOOT:
+            Sprintf(buf, "Loot %s", doname(otmp));
+            break;
+        case MCMD_TIP:
+            Sprintf(buf, "Tip %s", doname(otmp));
+            break;
+        case MCMD_EAT:
+            Sprintf(buf, "Eat %s", doname(otmp));
+            break;
+        case MCMD_INVENTORY:
+            Strcpy(buf, "Inventory");
+            break;
+        case MCMD_DROP:
+            Strcpy(buf, "Drop items");
+            break;
+        case MCMD_REST:
+            Strcpy(buf, "Rest one turn");
+            break;
+        case MCMD_SEARCH:
+            Strcpy(buf, "Search around you");
+            break;
+        case MCMD_LOOK_HERE:
+            Strcpy(buf, "Look at what is here");
+            break;
+        case MCMD_CAST_SPELL:
+            Strcpy(buf, "Cast a spell");
+            break;
+        case MCMD_UNTRAP_HERE:
+            Strcpy(buf, "Attempt to disarm trap");
+            break;
+        default:
+            continue;
+        }
+        mcmd_addmenu(win, acts[i], buf);
     }
     return K;
 }
