@@ -886,6 +886,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_inventory_key(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_command_key(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_repeat_key(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_here_actions(void);
+EMSCRIPTEN_KEEPALIVE char *nhweb_check_config(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_wizard(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_tile_file(void);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_role_name(int, int);
@@ -1429,6 +1430,23 @@ const char *
 nhweb_here_actions(void)
 {
     return program_state.input_state == commandInp ? here_cmd_actions() : "";
+}
+
+/* For a core of its own, run instead of main() and then dropped: reads the
+   options as a new game would, and returns what's wrong with them, as
+   config_errors_taken() gives them */
+char *
+nhweb_check_config(void)
+{
+    static char *argv[] = { (char *) "nethack", (char *) 0 };
+
+    early_init(1, argv);
+    gh.hname = argv[0];
+    choose_windows(DEFAULT_WINDOW_SYS);
+    config_errors_keep(TRUE);
+    initoptions();
+    config_errors_keep(FALSE);
+    return config_errors_taken();
 }
 
 /* The tile_file option, for the front end's tile set; "" if it isn't set */
