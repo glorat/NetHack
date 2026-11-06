@@ -437,15 +437,21 @@ ask_do_tutorial(void)
         menu_item *sel;
         anything any;
         char buf[BUFSZ];
+        int n, pass = 0;
+#ifdef __EMSCRIPTEN__
+        /* the web front end keeps the options file, and lets the player
+           change this in its settings */
+        Strcpy(buf, "You can change this in Game Settings.");
+#else
         const char *rc;
         boolean norc;
-        int n, pass = 0;
 
         rc = nh_basename(get_configfile(), TRUE);
         norc = !strcmp(get_configfile(), "/dev/null");
         Snprintf(buf, sizeof buf,
                  "Put \"OPTIONS=!tutorial\" in %s to skip this query.",
                  (rc && *rc && !norc) ? rc : "your configuration file");
+#endif
         do {
             win = create_nhwindow(NHW_MENU);
             start_menu(win, MENU_BEHAVE_STANDARD);
@@ -458,11 +464,17 @@ ask_do_tutorial(void)
             add_menu(win, &nul_glyphinfo, &any, any.a_char, 0,
                      ATR_NONE, NO_COLOR,
                      "No, just start play", MENU_ITEMFLAGS_NONE);
+#ifdef __EMSCRIPTEN__
+            any.a_char = 'd';
+            add_menu(win, &nul_glyphinfo, &any, any.a_char, 0,
+                     ATR_NONE, NO_COLOR,
+                     "No, and don't ask again", MENU_ITEMFLAGS_NONE);
+#endif
 
             add_menu_str(win, "");
             add_menu_str(win, buf);
             if (pass++) /* we'll get here after <space> or <return> */
-                add_menu_str(win, "(Please choose 'y' or 'n'.)");
+                add_menu_str(win, "(Please choose one.)");
 
             end_menu(win, "Do you want a tutorial?");
 
@@ -471,6 +483,15 @@ ask_do_tutorial(void)
         } while (!n);
         if (n > 0) {
             dotut = (sel[0].item.a_char == 'y');
+#ifdef __EMSCRIPTEN__
+            if (sel[0].item.a_char == 'd') {
+                /* as if the file said so, which #saveoptions then keeps */
+                flags.tutorial = FALSE;
+                opt_set_in_config[opt_tutorial] = TRUE;
+                shim_game_event(NHWEB_EVENT_OPTION, 0L, 0L, svm.moves, "",
+                                "!tutorial");
+            }
+#endif
             free((genericptr_t) sel);
         } else { /* ESC */
             dotut = FALSE;

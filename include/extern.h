@@ -3289,7 +3289,10 @@ enum nhweb_event {
     NHWEB_EVENT_ACHIEVEMENT = 1, /* a: ACH_* id */
     NHWEB_EVENT_CHRONICLE = 2,   /* a: LL_* flags; format string, text */
     NHWEB_EVENT_UEVENT = 3,      /* a: new value; text: u.uevent field */
-    NHWEB_EVENT_END = 4          /* a: encodeconduct(); b: nhweb_roleplay() */
+    NHWEB_EVENT_END = 4,         /* a: encodeconduct(); b: nhweb_roleplay() */
+    NHWEB_EVENT_OPTION = 5       /* text: an option the player chose, as an
+                                    options file line would set it, for the
+                                    front end to keep in the file */
 };
 extern void shim_game_event(int, long, long, long, const char *,
                             const char *);
