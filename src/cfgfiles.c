@@ -1466,6 +1466,7 @@ struct _config_error_frame {
 
 static struct _config_error_frame *config_error_data = 0;
 static struct _config_error_errmsg *config_error_msg = 0;
+static boolean config_errors_kept = FALSE;
 
 void
 config_error_init(boolean from_file, const char *sourcename, boolean secure)
@@ -1564,7 +1565,7 @@ config_erradd(const char *buf)
         return;
     }
 
-    if (iflags.in_lua) {
+    if (iflags.in_lua || config_errors_kept) {
         struct _config_error_errmsg *dat
                          = (struct _config_error_errmsg *) alloc(sizeof *dat);
 
@@ -1587,6 +1588,43 @@ config_erradd(const char *buf)
 
     pline("%s %s%s%s", config_error_data->secure ? "Error:" : " *",
           lineno, buf, punct);
+}
+
+/* keep the config errors that follow for config_errors_taken(), rather
+   than show them */
+void
+config_errors_keep(boolean keep)
+{
+    config_errors_kept = keep;
+}
+
+/* the config errors kept so far, oldest first, one "line<TAB>message" to
+   a line (line 0 if it isn't known), which are then forgotten; the caller
+   frees the result */
+char *
+config_errors_taken(void)
+{
+    struct _config_error_errmsg *dat, *next, *oldest = 0;
+    size_t len = 1;
+    char *buf, *p;
+
+    for (dat = config_error_msg; dat; dat = next) {
+        next = dat->next;
+        dat->next = oldest;
+        oldest = dat;
+        len += strlen(dat->errormsg) + 16;
+    }
+    config_error_msg = (struct _config_error_errmsg *) 0;
+    buf = p = (char *) alloc(len);
+    *p = '\0';
+    for (dat = oldest; dat; dat = next) {
+        next = dat->next;
+        Sprintf(p, "%d\t%s\n", dat->line_num, dat->errormsg);
+        p = eos(p);
+        free(dat->errormsg);
+        free(dat);
+    }
+    return buf;
 }
 
 int
