@@ -899,6 +899,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_valid_align(int, int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_terrain_glyph(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_reseed(unsigned long);
@@ -1115,6 +1116,16 @@ nhweb_describe(int x, int y)
     (void) memcpy(rng, saved_rng, rngsize);
     free(saved_rng);
     return found ? decode_mixed(out, buf) : (const char *) 0;
+}
+
+/* What #terrain's known map without monsters and objects shows at a square,
+   for the bot runner; -1 outside play */
+int
+nhweb_terrain_glyph(int x, int y)
+{
+    if (!program_state.in_moveloop || !isok(x, y))
+        return -1;
+    return known_terrain_glyph(x, y);
 }
 
 /* The map's ascii_map option, which the front end also switches outside the
