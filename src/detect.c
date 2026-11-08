@@ -2350,6 +2350,19 @@ dump_map(void)
 }
 #endif /* DUMPLOG */
 
+/* what #terrain's known map without monsters and objects shows at x,y,
+   for an interface to read without displaying it; unlike #terrain, a
+   view constrained by being underwater or swallowed stays constrained */
+int
+known_terrain_glyph(coordxy x, coordxy y)
+{
+    nhsym default_sym = svl.level.flags.arboreal ? S_tree : S_stone;
+
+    return reveal_terrain_getglyph(x, y, u.uswallow,
+                                   cmap_to_glyph(default_sym),
+                                   TER_MAP | TER_TRP);
+}
+
 /* idea from crawl; show known portion of map without any monsters,
    objects, or traps occluding the view of the underlying terrain;
    in explore or wizard modes, can also display unexplored portion */

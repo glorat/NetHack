@@ -546,6 +546,7 @@ extern void premap_detect(void);
 #ifdef DUMPLOG
 extern void dump_map(void);
 #endif
+extern int known_terrain_glyph(coordxy, coordxy);
 extern void reveal_terrain(unsigned);
 extern int wiz_mgender(void);
 
