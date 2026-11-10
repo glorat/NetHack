@@ -229,7 +229,7 @@ struct window_procs shim_procs = {
      | WC2_HILITE_STATUS | WC2_HITPOINTBAR | WC2_FLUSH_STATUS
      | WC2_RESET_STATUS
 #endif
-     | WC2_DARKGRAY | WC2_SUPPRESS_HIST | WC2_STATUSLINES),
+     | WC2_DARKGRAY | WC2_SUPPRESS_HIST | WC2_URGENT_MESG | WC2_STATUSLINES),
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},   /* color availability */
     shim_init_nhwindows, shim_player_selection, shim_askname, shim_get_nh_event,
     shim_exit_nhwindows, shim_suspend_nhwindows, shim_resume_nhwindows,
