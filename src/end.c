@@ -609,6 +609,11 @@ dump_everything(
     putstr(0, 0, "");
     list_genocided('d', FALSE); /* 'd' => 'y' */
     putstr(0, 0, "");
+#ifdef __EMSCRIPTEN__
+    /* here, so only a build writing a dumplog (the server's) runs it, after
+       show_overview() has brought the current level's overview up to date */
+    nhweb_final_events();
+#endif
     dump_redirect(FALSE);
 #else
     nhUse(how);

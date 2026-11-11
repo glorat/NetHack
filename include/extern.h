@@ -3291,14 +3291,19 @@ enum nhweb_event {
     NHWEB_EVENT_CHRONICLE = 2,   /* a: LL_* flags; format string, text */
     NHWEB_EVENT_UEVENT = 3,      /* a: new value; text: u.uevent field */
     NHWEB_EVENT_END = 4,         /* a: encodeconduct(); b: nhweb_roleplay() */
-    NHWEB_EVENT_OPTION = 5       /* text: an option the player chose, as an
+    NHWEB_EVENT_OPTION = 5,      /* text: an option the player chose, as an
                                     options file line would set it, for the
                                     front end to keep in the file */
+    NHWEB_EVENT_FINAL = 6        /* format: a section of the dumplog; a, b:
+                                    its main numbers; text: the rest, as
+                                    tab-separated key=value with backslash,
+                                    tab and newline escaped */
 };
 extern void shim_game_event(int, long, long, long, const char *,
                             const char *);
 extern void nhweb_uevent_changes(boolean);
 extern long nhweb_roleplay(void);
+extern void nhweb_final_events(void);
 #endif
 
 /* ### track.c ### */

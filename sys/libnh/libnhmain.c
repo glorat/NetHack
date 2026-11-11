@@ -1483,6 +1483,390 @@ nhweb_command_key(void)
     return program_state.input_state == commandInp ? extcmd_initiator() : 0;
 }
 
+#ifdef DUMPLOG
+struct nhweb_fields {
+    char text[4 * BUFSZ];
+    size_t len;
+};
+
+/* Adds key=value, tab-separated from the last, with backslash, tab and
+   newline escaped; a field that doesn't fit whole is left out */
+staticfn void
+nhweb_field(struct nhweb_fields *f, const char *key, const char *val)
+{
+    char buf[4 * BUFSZ];
+    size_t n;
+    const char *p;
+
+    if (!val)
+        return;
+    Sprintf(buf, "%s%s=", f->len ? "\t" : "", key);
+    n = strlen(buf);
+    for (p = val; *p && n + 2 < sizeof buf; ++p) {
+        char c = *p;
+
+        if (c == '\\' || c == '\t' || c == '\n') {
+            buf[n++] = '\\';
+            c = (c == '\t') ? 't' : (c == '\n') ? 'n' : '\\';
+        }
+        buf[n++] = c;
+    }
+    if (*p || f->len + n + 1 > sizeof f->text)
+        return;
+    memcpy(f->text + f->len, buf, n);
+    f->len += n;
+    f->text[f->len] = '\0';
+}
+
+staticfn void
+nhweb_fieldl(struct nhweb_fields *f, const char *key, long val)
+{
+    char buf[32];
+
+    Sprintf(buf, "%ld", val);
+    nhweb_field(f, key, buf);
+}
+
+static const struct {
+    long mask;
+    const char *name;
+} nhweb_slots[] = {
+    { W_ARM, "suit" }, { W_ARMC, "cloak" }, { W_ARMH, "helmet" },
+    { W_ARMS, "shield" }, { W_ARMG, "gloves" }, { W_ARMF, "boots" },
+    { W_ARMU, "shirt" }, { W_WEP, "weapon" },
+    { W_SWAPWEP, "alternate weapon" }, { W_QUIVER, "quiver" },
+    { W_ART, "carried artifact" }, { W_ARTI, "invoked artifact" },
+    { W_AMUL, "amulet" }, { W_RINGL, "left ring" }, { W_RINGR, "right ring" },
+    { W_TOOL, "eyes" }, { W_SADDLE, "saddle" }, { W_BALL, "ball" },
+    { W_CHAIN, "chain" },
+};
+
+/* The slots in mask by name, comma-separated */
+staticfn void
+nhweb_slots_field(struct nhweb_fields *f, const char *key, long mask)
+{
+    char buf[BUFSZ];
+    int i;
+
+    buf[0] = '\0';
+    for (i = 0; i < SIZE(nhweb_slots); ++i)
+        if (mask & nhweb_slots[i].mask) {
+            if (*buf)
+                Strcat(buf, ",");
+            Strcat(buf, nhweb_slots[i].name);
+        }
+    if (*buf)
+        nhweb_field(f, key, buf);
+}
+
+staticfn void
+nhweb_final(const char *section, long a, long b, struct nhweb_fields *f)
+{
+    shim_game_event(NHWEB_EVENT_FINAL, a, b, svm.moves, section, f->text);
+    f->len = 0;
+    f->text[0] = '\0';
+}
+
+staticfn void
+nhweb_final_status(struct nhweb_fields *f)
+{
+    static const char *const hunger[] = {
+        "satiated", "not hungry", "hungry", "weak",
+        "fainting", "fainted", "starved",
+    };
+    static const char *const burden[] = {
+        "unencumbered", "burdened", "stressed",
+        "strained", "overtaxed", "overloaded",
+    };
+    int enc = near_capacity();
+
+    nhweb_field(f, "str", get_strength_str());
+    nhweb_fieldl(f, "int", ACURR(A_INT));
+    nhweb_fieldl(f, "wis", ACURR(A_WIS));
+    nhweb_fieldl(f, "dex", ACURR(A_DEX));
+    nhweb_fieldl(f, "con", ACURR(A_CON));
+    nhweb_fieldl(f, "cha", ACURR(A_CHA));
+    nhweb_fieldl(f, "ac", u.uac);
+    nhweb_fieldl(f, "xl", u.ulevel);
+    nhweb_fieldl(f, "exp", u.uexp);
+    nhweb_fieldl(f, "hp", u.uhp);
+    nhweb_fieldl(f, "hpmax", u.uhpmax);
+    nhweb_fieldl(f, "pw", u.uen);
+    nhweb_fieldl(f, "pwmax", u.uenmax);
+    if (Upolyd) {
+        nhweb_field(f, "form", mons[u.umonnum].pmnames[NEUTRAL]);
+        nhweb_fieldl(f, "formhp", u.mh);
+        nhweb_fieldl(f, "formhpmax", u.mhmax);
+    }
+    if (ismnum(u.ulycn))
+        nhweb_field(f, "lycanthrope", mons[u.ulycn].pmnames[NEUTRAL]);
+    nhweb_fieldl(f, "gold", money_cnt(gi.invent));
+    nhweb_fieldl(f, "luck", Luck);
+    nhweb_fieldl(f, "alignment", u.ualign.record);
+    nhweb_fieldl(f, "godanger", u.ugangr);
+    nhweb_fieldl(f, "prayertimeout", u.ublesscnt);
+    nhweb_fieldl(f, "nutrition", u.uhunger);
+    if (u.uhs >= 0 && u.uhs < SIZE(hunger))
+        nhweb_field(f, "hunger", hunger[u.uhs]);
+    if (enc >= 0 && enc < SIZE(burden))
+        nhweb_field(f, "encumbrance", burden[enc]);
+    if (u.twoweap)
+        nhweb_field(f, "twoweapon", "1");
+    nhweb_final("status", 0L, 0L, f);
+}
+
+/* Each object in list and in its containers, numbered from next in the
+   order sent; returns the number after the last */
+staticfn int
+nhweb_final_items(struct nhweb_fields *f, struct obj *list, int parent,
+                  int next)
+{
+    struct obj *obj;
+
+    for (obj = list; obj; obj = obj->nobj) {
+        int index = next++;
+
+        if (parent < 0) {
+            char letter[2];
+
+            letter[0] = obj->invlet, letter[1] = '\0';
+            nhweb_field(f, "letter", letter);
+        } else {
+            nhweb_fieldl(f, "in", parent);
+        }
+        nhweb_field(f, "class", def_oc_syms[(int) obj->oclass].name);
+        nhweb_field(f, "name", OBJ_NAME(objects[obj->otyp]));
+        if ((obj->otyp == CORPSE || obj->otyp == TIN || obj->otyp == EGG
+             || obj->otyp == STATUE || obj->otyp == FIGURINE)
+            && ismnum(obj->corpsenm))
+            nhweb_field(f, "of", mons[obj->corpsenm].pmnames[NEUTRAL]);
+        nhweb_field(f, "buc", obj->blessed ? "blessed"
+                              : obj->cursed ? "cursed" : "uncursed");
+        if (obj->oartifact)
+            nhweb_field(f, "artifact", artiname(obj->oartifact));
+        if (has_oname(obj))
+            nhweb_field(f, "named", ONAME(obj));
+        nhweb_slots_field(f, "worn", obj->owornmask);
+        if (obj->oeroded)
+            nhweb_fieldl(f, "eroded", obj->oeroded);
+        if (obj->oeroded2)
+            nhweb_fieldl(f, "eroded2", obj->oeroded2);
+        if (obj->oerodeproof)
+            nhweb_field(f, "erodeproof", "1");
+        if (obj->greased)
+            nhweb_field(f, "greased", "1");
+        if (obj->opoisoned)
+            nhweb_field(f, "poisoned", "1");
+        if (obj->recharged)
+            nhweb_fieldl(f, "recharged", obj->recharged);
+        if (obj->lamplit)
+            nhweb_field(f, "lit", "1");
+        if (obj->olocked)
+            nhweb_field(f, "locked", "1");
+        if (obj->obroken)
+            nhweb_field(f, "broken", "1");
+        if (obj->otrapped)
+            nhweb_field(f, "trapped", "1");
+        nhweb_fieldl(f, "weight", obj->owt);
+        /* the flag stays only for a live cat; its box holds a corpse that
+           the dumplog doesn't list, and naming it would change its state */
+        if (SchroedingersBox(obj))
+            nhweb_field(f, "cat", "alive");
+        nhweb_field(f, "text", doname(obj));
+        nhweb_final("item", obj->quan, obj->spe, f);
+        if (Has_contents(obj) && !SchroedingersBox(obj))
+            next = nhweb_final_items(f, obj->cobj, index, next);
+    }
+    return next;
+}
+
+staticfn void
+nhweb_final_intrinsics(struct nhweb_fields *f)
+{
+    static const struct {
+        long mask;
+        const char *name;
+    } from[] = {
+        { FROMOUTSIDE, "outside" }, { FROMRACE, "race" },
+        { FROMEXPER, "role" }, { FROMFORM, "form" },
+    };
+    const char *name;
+    int i, j, p;
+
+    for (i = 0; (name = property_by_index(i, &p)) != 0; ++i) {
+        struct prop *pr = &u.uprops[p];
+        char buf[BUFSZ];
+
+        if (!pr->intrinsic && !pr->extrinsic)
+            continue;
+        nhweb_field(f, "name", name);
+        buf[0] = '\0';
+        for (j = 0; j < SIZE(from); ++j)
+            if (pr->intrinsic & from[j].mask) {
+                if (*buf)
+                    Strcat(buf, ",");
+                Strcat(buf, from[j].name);
+            }
+        if (*buf)
+            nhweb_field(f, "from", buf);
+        if (p == WOUNDED_LEGS) {
+            long legs = pr->extrinsic & BOTH_SIDES;
+
+            if (legs)
+                nhweb_field(f, "legs", legs == BOTH_SIDES ? "both"
+                                       : legs == LEFT_SIDE ? "left" : "right");
+        } else {
+            nhweb_slots_field(f, "items", pr->extrinsic);
+        }
+        nhweb_slots_field(f, "blocked", pr->blocked);
+        if (pr->intrinsic & I_SPECIAL)
+            nhweb_field(f, "controlled", "1");
+        nhweb_final("intrinsic", pr->intrinsic & TIMEOUT, 0L, f);
+    }
+}
+
+staticfn void
+nhweb_final_spells(struct nhweb_fields *f)
+{
+    int i;
+
+    for (i = 0; i < MAXSPELL && svs.spl_book[i].sp_id != NO_SPELL; ++i) {
+        int id = svs.spl_book[i].sp_id;
+
+        nhweb_field(f, "name", OBJ_NAME(objects[id]));
+        nhweb_field(f, "school", skill_name(spell_skilltype(id)));
+        nhweb_final("spell", svs.spl_book[i].sp_lev, svs.spl_book[i].sp_know,
+                    f);
+    }
+}
+
+staticfn void
+nhweb_final_skills(struct nhweb_fields *f)
+{
+    static const char *const level[] = {
+        "restricted", "unskilled", "basic", "skilled",
+        "expert", "master", "grand master",
+    };
+    int i;
+
+    for (i = P_NONE + 1; i < P_NUM_SKILLS; ++i) {
+        if (P_RESTRICTED(i))
+            continue;
+        nhweb_field(f, "name", skill_name(i));
+        if (P_SKILL(i) >= 0 && P_SKILL(i) < SIZE(level))
+            nhweb_field(f, "level", level[P_SKILL(i)]);
+        if (P_MAX_SKILL(i) >= 0 && P_MAX_SKILL(i) < SIZE(level))
+            nhweb_field(f, "max", level[P_MAX_SKILL(i)]);
+        nhweb_fieldl(f, "practice", P_ADVANCE(i));
+        nhweb_final("skill", P_SKILL(i), P_MAX_SKILL(i), f);
+    }
+}
+
+/* What #overview knows of each level visited; counts of 3 mean "many" */
+staticfn void
+nhweb_final_levels(struct nhweb_fields *f)
+{
+    extern const struct shclass shtypes[];
+    mapseen *mptr;
+
+    for (mptr = svm.mapseenchn; mptr; mptr = mptr->next) {
+        nhweb_field(f, "dungeon", svd.dungeons[mptr->lev.dnum].dname);
+#define NHWEB_COUNT(key, n) \
+        if (n)                                                            \
+            nhweb_fieldl(f, key, (long) (n))
+        NHWEB_COUNT("fountains", mptr->feat.nfount);
+        NHWEB_COUNT("sinks", mptr->feat.nsink);
+        NHWEB_COUNT("altars", mptr->feat.naltar);
+        NHWEB_COUNT("thrones", mptr->feat.nthrone);
+        NHWEB_COUNT("graves", mptr->feat.ngrave);
+        NHWEB_COUNT("trees", mptr->feat.ntree);
+        NHWEB_COUNT("water", mptr->feat.water);
+        NHWEB_COUNT("lava", mptr->feat.lava);
+        NHWEB_COUNT("ice", mptr->feat.ice);
+        NHWEB_COUNT("temples", mptr->feat.ntemple);
+        NHWEB_COUNT("shops", mptr->feat.nshop);
+#undef NHWEB_COUNT
+        if (mptr->feat.nshop) {
+            int shoptype = (int) mptr->feat.shoptype;
+
+            nhweb_field(f, "shop",
+                        !shoptype ? "various"
+                        : shoptype < SHOPBASE ? "untended"
+                        : shtypes[shoptype - SHOPBASE].name);
+        }
+        if (mptr->feat.naltar && mptr->feat.msalign != MSA_NONE)
+            nhweb_field(f, "altar",
+                        align_str(Amask2align(Msa2amask(mptr->feat.msalign))));
+#define NHWEB_FLAG(key, flag) \
+        if (mptr->flags.flag)                                             \
+            nhweb_field(f, key, "1")
+        NHWEB_FLAG("oracle", oracle);
+        NHWEB_FLAG("sokobansolved", sokosolved);
+        NHWEB_FLAG("bigroom", bigroom);
+        NHWEB_FLAG("castle", castle);
+        NHWEB_FLAG("valley", valley);
+        NHWEB_FLAG("sanctum", msanctum);
+        NHWEB_FLAG("ludios", ludios);
+        NHWEB_FLAG("rogue", roguelevel);
+        NHWEB_FLAG("questsummons", quest_summons);
+        NHWEB_FLAG("questing", questing);
+        NHWEB_FLAG("vibratingsquare", vibrating_square);
+        NHWEB_FLAG("knownbones", knownbones);
+        NHWEB_FLAG("forgotten", forgot);
+        NHWEB_FLAG("unreachable", notreachable);
+#undef NHWEB_FLAG
+        if (mptr->br) {
+            d_level *to = on_level(&mptr->br->end1, &mptr->lev)
+                              ? &mptr->br->end2 : &mptr->br->end1;
+
+            nhweb_field(f, "branch", svd.dungeons[to->dnum].dname);
+        }
+        if (mptr->custom)
+            nhweb_field(f, "annotation", mptr->custom);
+        nhweb_final("level", mptr->lev.dlevel, depth(&mptr->lev), f);
+    }
+}
+
+staticfn void
+nhweb_final_monsters(struct nhweb_fields *f)
+{
+    int i;
+
+    for (i = LOW_PM; i < NUMMONS; ++i)
+        if (svm.mvitals[i].died) {
+            nhweb_field(f, "name", mons[i].pmnames[NEUTRAL]);
+            nhweb_final("vanquished", svm.mvitals[i].died, 0L, f);
+        }
+    for (i = LOW_PM; i < NUMMONS; ++i)
+        /* as the dumplog's list, which leaves out uniques */
+        if ((svm.mvitals[i].mvflags & G_GONE)
+            && !((mons[i].geno & G_UNIQ) && i != PM_HIGH_CLERIC)) {
+            nhweb_field(f, "name", mons[i].pmnames[NEUTRAL]);
+            nhweb_field(f, "how", (svm.mvitals[i].mvflags & G_GENOD)
+                                      ? "genocided" : "extinct");
+            nhweb_final("genocided", 0L, 0L, f);
+        }
+}
+
+/* What the dumplog shows of a game's end, as NHWEB_EVENT_FINAL events,
+   things by their names rather than the core's numbers for them */
+void
+nhweb_final_events(void)
+{
+    static struct nhweb_fields f;
+
+    f.len = 0;
+    f.text[0] = '\0';
+    nhweb_final_status(&f);
+    (void) nhweb_final_items(&f, gi.invent, -1, 0);
+    nhweb_final_intrinsics(&f);
+    nhweb_final_spells(&f);
+    nhweb_final_skills(&f);
+    nhweb_final_levels(&f);
+    nhweb_final_monsters(&f);
+}
+#endif /* DUMPLOG */
+
 /***
  * Helpers
  ***/
