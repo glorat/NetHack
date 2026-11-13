@@ -340,6 +340,10 @@ WASM_CFLAGS += -Wshadow
 WASM_CFLAGS += $(WINCFLAGS)   #WINCFLAGS set from multiw-2.500
 WASM_CFLAGS += -DSYSCF -DSYSCF_FILE=\"/sysconf\" -DSECURE
 WASM_CFLAGS += -DDUMPLOG
+# judge builds (bot runner, server) read what the hero needn't know; never the client's
+ifdef NHWEB_JUDGE
+WASM_CFLAGS += -DNHWEB_JUDGE
+endif
 #WASM_CFLAGS += -g -I../include -DNOTPARMDECL
 WASM_CFLAGS += -I../include -DNOTPARMDECL
 # NetHack sources control

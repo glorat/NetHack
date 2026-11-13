@@ -900,6 +900,13 @@ EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_terrain_glyph(int, int);
+#ifdef NHWEB_JUDGE
+EMSCRIPTEN_KEEPALIVE int nhweb_judge_terrain(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_judge_luck(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_judge_luckstone(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_judge_nymph(void);
+EMSCRIPTEN_KEEPALIVE const char *nhweb_judge_monsters(int);
+#endif
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_reseed(unsigned long);
@@ -1127,6 +1134,94 @@ nhweb_terrain_glyph(int x, int y)
         return -1;
     return known_terrain_glyph(x, y);
 }
+
+#ifdef NHWEB_JUDGE
+/* Judge builds only (bot runner, server): what the hero needn't know. */
+
+/* A square's real terrain type (levl typ, SDOOR and SCORR included), with
+   256 added for a down staircase or ladder and 512 for an up one; -1 outside
+   play */
+int
+nhweb_judge_terrain(int x, int y)
+{
+    stairway *st;
+
+    if (!program_state.in_moveloop || !isok(x, y))
+        return -1;
+    st = stairway_at(x, y);
+    return levl[x][y].typ + (st ? (st->up ? 512 : 256) : 0);
+}
+
+/* The hero's Luck, timed-out and luckstone parts together */
+int
+nhweb_judge_luck(void)
+{
+    return program_state.in_moveloop ? Luck : 0;
+}
+
+/* A luckstone carried: -1 none, else 0 uncursed, 1 blessed, 2 cursed */
+int
+nhweb_judge_luckstone(void)
+{
+    struct obj *o;
+
+    if (!program_state.in_moveloop || !(o = carrying(LUCKSTONE)))
+        return -1;
+    return o->cursed ? 2 : o->blessed ? 1 : 0;
+}
+
+/* The nymph nearest the hero, as x + 100 * y + 10000 * distance, with
+   1000000 added when the hero has a clear line to her square and she isn't
+   invisible or hiding (what infravision needs: display.h's
+   see_with_infrared); -1 for none on the level */
+int
+nhweb_judge_nymph(void)
+{
+    struct monst *mtmp, *best = 0;
+    int bestd = 999, d;
+
+    if (!program_state.in_moveloop)
+        return -1;
+    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+        if (DEADMONSTER(mtmp) || mtmp->data->mlet != S_NYMPH)
+            continue;
+        d = max(abs(mtmp->mx - u.ux), abs(mtmp->my - u.uy));
+        if (d < bestd)
+            bestd = d, best = mtmp;
+    }
+    if (!best)
+        return -1;
+    return best->mx + 100 * best->my + 10000 * bestd
+           + ((couldsee(best->mx, best->my) && !best->minvis
+               && !best->mundetected) ? 1000000 : 0);
+}
+
+/* The hero's square, then each monster within radius of it (the steed and
+   the hero's own form left out): "ux uy;id x y mndx hp hpmax;..." */
+const char *
+nhweb_judge_monsters(int radius)
+{
+    static char buf[8192];
+    struct monst *mtmp;
+    size_t n;
+
+    buf[0] = '\0';
+    if (!program_state.in_moveloop)
+        return buf;
+    Snprintf(buf, sizeof buf, "%d %d;", u.ux, u.uy);
+    n = strlen(buf);
+    for (mtmp = fmon; mtmp && n < sizeof buf - 64; mtmp = mtmp->nmon) {
+        if (DEADMONSTER(mtmp) || mtmp == u.usteed
+            || max(abs(mtmp->mx - u.ux), abs(mtmp->my - u.uy)) > radius)
+            continue;
+        Snprintf(buf + n, sizeof buf - n, "%u %d %d %d %d %d;",
+                 mtmp->m_id, mtmp->mx, mtmp->my,
+                 monsndx(mtmp->data), mtmp->mhp, mtmp->mhpmax);
+        n += strlen(buf + n);
+    }
+    return buf;
+}
+#endif /* NHWEB_JUDGE */
 
 /* The map's ascii_map option, which the front end also switches outside the
    options menu */
