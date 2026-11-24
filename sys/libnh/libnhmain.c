@@ -900,6 +900,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_chosen(int);
 EMSCRIPTEN_KEEPALIVE void nhweb_choose(int, int, int, int);
 EMSCRIPTEN_KEEPALIVE const char *nhweb_describe(int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_terrain_glyph(int, int);
+EMSCRIPTEN_KEEPALIVE int nhweb_cell_id(int, int, int);
 EMSCRIPTEN_KEEPALIVE int nhweb_map_marks(int, int, int, unsigned);
 EMSCRIPTEN_KEEPALIVE int nhweb_in_play(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_reseed(unsigned long);
@@ -954,6 +955,54 @@ nhweb_default_menu_colors(void)
         gm.menu_colorings = players;
     }
     iflags.use_menu_color = wanted;
+}
+
+/* Whether the glyph at the hero's square is the hero, rather than the floor or
+   an object that the map shows when the hero cannot be seen. */
+static boolean
+nhweb_hero_at(int x, int y, int glyph)
+{
+    if (x != u.ux || y != u.uy || !canspotself())
+        return FALSE;
+    if (glyph == hero_glyph)
+        return TRUE;
+    if (u.usteed && mon_visible(u.usteed) && glyph_is_ridden_monster(glyph))
+        return TRUE;
+    switch (U_AP_TYPE) {
+    case M_AP_FURNITURE:
+        return glyph == cmap_to_glyph((int) gy.youmonst.mappearance);
+    case M_AP_OBJECT:
+        return glyph == objnum_to_glyph((int) gy.youmonst.mappearance);
+    case M_AP_MONSTER:
+        return glyph == monnum_to_glyph((int) gy.youmonst.mappearance, Ugender);
+    default:
+        return FALSE;
+    }
+}
+
+/* A stable id for whatever the map draws at a square: -1 for the hero,
+   a monster's or object's id otherwise, and 0 for terrain. The front end
+   uses it to animate a movement without guessing from matching sprites. */
+int
+nhweb_cell_id(int x, int y, int glyph)
+{
+    struct monst *mtmp;
+    struct obj *otmp;
+
+    if (nhweb_hero_at(x, y, glyph))
+        return -1;
+    mtmp = m_at(x, y);
+    if (glyph_is_monster(glyph))
+        return mtmp ? (int) mtmp->m_id : 0;
+    /* A mimic's fake object is in the level's object list, but the entity
+       actually drawn is the monster. */
+    if (mtmp && (M_AP_TYPE(mtmp) == M_AP_OBJECT || M_AP_TYPE(mtmp) == M_AP_FURNITURE))
+        return (int) mtmp->m_id;
+    if (glyph_is_object(glyph)) {
+        otmp = svl.level.objects[x][y];
+        return otmp ? (int) otmp->o_id : 0;
+    }
+    return 0;
 }
 
 /* get_bkglyph_and_framecolor() reports lit room floor as GLYPH_UNEXPLORED,
