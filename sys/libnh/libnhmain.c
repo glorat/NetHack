@@ -923,6 +923,7 @@ EMSCRIPTEN_KEEPALIVE int nhweb_font_size_message(void);
 EMSCRIPTEN_KEEPALIVE int nhweb_ascii_map(void);
 EMSCRIPTEN_KEEPALIVE void nhweb_set_ascii_map(int);
 EMSCRIPTEN_KEEPALIVE int nhweb_dec_graphics(void);
+EMSCRIPTEN_KEEPALIVE int nhweb_utf8_graphics(void);
 EMSCRIPTEN_KEEPALIVE char *nhweb_read_file(const char *);
 
 /* Blessed items green and cursed ones red in menus, after the player's own
@@ -1149,6 +1150,13 @@ int
 nhweb_dec_graphics(void)
 {
     return SYMHANDLING(H_DEC);
+}
+
+/* Whether the current symset draws with Unicode, for the ASCII renderer. */
+int
+nhweb_utf8_graphics(void)
+{
+    return SYMHANDLING(H_UTF8);
 }
 
 /* The turn, which the status window doesn't otherwise say unless the time
